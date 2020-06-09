@@ -13,7 +13,8 @@ begin
   have h := exists_unique_congr iff,
   rw ← h,
   exact exun,
-  sorry
+  intro x,
+  refl,
 end
 
 variables {V:Type*} [fintype V] [inhabited V]
@@ -329,7 +330,7 @@ begin
   simpa,
 end
 -- CR jstark: rename this lemma, it doesn't depend on friendship
-lemma friendship_reg_card_count_3 
+lemma reg_card_count_3 
   {G:fin_graph V} {d:ℕ} (hd : regular_graph G d) (v:V) :
 card_edges (path_bigraph G (neighbors G v) finset.univ) = d * d :=
 begin
@@ -376,7 +377,7 @@ begin
   apply finset.erase_union_sing,
   apply finset.mem_univ,
 
-  rw ← friendship_reg_card_count_3 hd v,
+  rw ← reg_card_count_3 hd v,
   rw ← un,
 
   rw ← finset.card_univ,
@@ -488,9 +489,9 @@ lemma deg_two_friendship_has_pol
 d = 2 → exists_politician G :=
 begin
   intro deq2,
+  rw deq2 at hd,
   have v := arbitrary V,
   have hfr:=friendship_reg_card hG hd,
-  rw deq2 at hfr,
   have h2 : fintype.card V - 1 = 2 := by linarith,
   
   have herase:(finset.univ.erase v).card = fintype.card V-1,
@@ -517,17 +518,18 @@ begin
   apply finset.mem_univ,
   rw herase,
   
-  sorry, sorry,
-  -- unfold degree at hd,
-  -- rw hd,
-  -- rw deq2,
-  -- rw ← neighbor_iff_adjacent,
-  -- rw h',
-  -- rw finset.mem_erase,
-  -- split,
-  -- symmetry,
-  -- apply h,
-  -- apply finset.mem_univ,
+  --the following line was missing
+  unfold regular_graph at hd,
+  unfold degree at hd,
+  rw hd,
+
+  rw ← neighbor_iff_adjacent,
+  rw h',
+  rw finset.mem_erase,
+  split,
+  symmetry,
+  apply h,
+  apply finset.mem_univ,
 end
 
 lemma deg_le_two_friendship_has_pol 
@@ -540,6 +542,7 @@ begin
   { apply deg_two_friendship_has_pol hG hd, refl },
 end
 
+/-
 lemma eigenval_constraints_contra {n:Type*}[fintype n]{d:ℕ}{f:n → ℝ}{hd:d>2}:
   (∃ a:n, f(a)=d ∧ ∀ b:n, a ≠ b → f(b)=real.sqrt(d-1)∨ f(b)=-real.sqrt(d-1)) → finset.univ.sum f ≠ 0:=
 begin
@@ -597,6 +600,7 @@ begin
   sorry,
 
 end
+-/
 
 -- lemma exists_eigenbasis_of_sq_eq_J_plus_smul_id {n:Type*} [fintype n] {a:ℝ} {M: matrix n n ℝ}:
 --   (M.mul M = (a • 1) + matrix_J n) → ∃ b: finset (n→ ℝ), is_eigenbasis M.to_lin ↑b ∧ ((λ x:n, (1:ℝ)) ∈ b):=
