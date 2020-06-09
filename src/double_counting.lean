@@ -11,6 +11,8 @@ noncomputable theory
 variables {α :Type*} {β :Type*}
 
 
+
+
 def uncurried (G:bigraph α β):(α × β) → Prop:=
     function.uncurry (G.E)
 

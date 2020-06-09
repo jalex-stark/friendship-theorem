@@ -31,14 +31,22 @@ begin
     simp,
 end
 
-def findicator {α : Type*} [fintype α] [decidable_eq α] (s: finset α):α → ℕ:=
-    λ (a:α), prop_to_nat (a ∈ s)
+def findicator {α : Type*} [fintype α] [decidable_eq α] (s: finset α) (a : α) : ℤ :=
+    coe $ prop_to_nat (a ∈ s)
 
-lemma ind_one_of_mem {α : Type*} [fintype α] [decidable_eq α] {s: finset α} {x: α}:
-    x ∈ s → findicator s x = 1:= true_to_nat
+local attribute [simp]
+lemma ind_one_of_mem {α : Type*} [fintype α] [decidable_eq α] {s: finset α} {x: α} (hx : x ∈ s) :
+    findicator s x = (1:ℤ):= 
+    begin
+      unfold findicator, norm_cast, exact true_to_nat hx,
+    end
 
-lemma ind_zero_of_not_mem {α : Type*} [fintype α] [decidable_eq α] {s: finset α} {x: α}:
-    x ∉ s → findicator s x = 0:= false_to_nat
+local attribute [simp]
+lemma ind_zero_of_not_mem {α : Type*} [fintype α] [decidable_eq α] {s: finset α} {x: α} (hx : x ∉ s):
+    findicator s x = 0 := 
+    begin
+      unfold findicator, norm_cast, exact false_to_nat hx,
+    end
 
 lemma ind_one_iff_mem {α : Type*} [fintype α] [decidable_eq α] {s: finset α} {x: α}:
     findicator s x = 1 ↔ x ∈ s:=
@@ -71,15 +79,12 @@ begin
     symmetry,
     apply finset.sum_subset,
     apply finset.subset_univ,
-    intros a h0 ha,
-    rw false_to_nat ha,
-    symmetry,
-    transitivity s.sum (λ x:α, 1),
-    apply finset.card_eq_sum_ones,
-    apply finset.sum_congr,
-    refl,
-    intros x hx,
-    rw ind_one_of_mem hx,
+    intros a h0 ha, simp [ha],
+    symmetry, 
+    transitivity s.sum (λ x:α, (1:ℤ)),
+    {rw finset.sum_const, simp},
+    apply finset.sum_congr, refl,
+    intros x hx, simp [hx],
 end
 
 lemma prod_inds_eq_ind_inter {n : Type*} [fintype n] [decidable_eq n] (s t: finset n):

@@ -4,11 +4,11 @@ open_locale classical
 noncomputable theory
 
 section matrix_coe
-def matrix_compose {m n α β:Type*} [fintype m][fintype n](f:α → β):
+def matrix_compose {m n α β:Type*} [fintype m] [fintype n] (f:α → β) :
     (matrix m n α)→(matrix m n β):=
     λ (M: matrix m n α) (i:m) (j:n), f(M i j)
 
-def matrix_coe {m n α β:Type*} [fintype m][fintype n][has_coe α β]:
+def matrix_coe {m n α β:Type*} [fintype m] [fintype n] [has_coe α β] :
     (matrix m n α)→(matrix m n β):=
     λ (M: matrix m n α) (i:m) (j:n), (M i j:β)
 
@@ -82,7 +82,7 @@ begin
     rw ← h,
 end
 
-def matrix_J {m:Type*}[fintype m] : matrix m m ℕ:=
+def matrix_J (m:Type*) [fintype m] : matrix m m ℤ :=
     λ (i j:m), 1
 
 
