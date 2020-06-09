@@ -1,4 +1,0 @@
-import
-
-open_locale classical
-noncomputable theory
