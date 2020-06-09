@@ -1,4 +1,4 @@
-import data.real.basic 
+import data.zmod.basic 
 import adjacency_matrix sym_matrix double_counting old_double_counting data.fintype.basic
 import tactic
 
@@ -617,7 +617,31 @@ end
   
 
 -- end
-  
+
+def matrix_J_mod_p (V)[fintype V](p:ℕ): matrix V V (zmod p):=
+  matrix_compose (coe:ℤ → zmod p) (matrix_J V)
+
+lemma matrix_J_idem_mod_p
+  {p:ℕ} (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
+(matrix_J_mod_p V p)^2 = (matrix_J_mod_p V p) :=
+begin
+  sorry
+end
+
+lemma friendship_reg_adj_sq_mod_p
+  {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d)
+  {p:ℕ} (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
+(matrix_compose (coe:ℤ → zmod p) (adjacency_matrix G))^2 = matrix_J V:=
+begin
+  sorry
+end
+
+lemma tr_pth_power_mod_p
+  {p:ℕ} (M:V → V → (zmod p)) (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
+matrix.trace (M^p) = (matrix.trace M)^p:=
+begin
+  sorry
+end
 
 lemma three_le_deg_friendship_contra 
   {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
