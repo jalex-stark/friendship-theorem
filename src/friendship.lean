@@ -369,7 +369,7 @@ theorem friendship_reg_card
   {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
 (fintype.card V) - 1 + d = d * d :=
 begin
-  have v:= _inst_2.default,
+  have v:=arbitrary V,
   have hv:v ∈ finset.univ,
   apply finset.mem_univ,
 
@@ -391,6 +391,13 @@ begin
   symmetry,
   apply card_edges_add_of_eq_disj_union_eq,
   apply finset.erase_disj_sing,
+end
+
+theorem friendship_reg_card'
+  {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
+(fintype.card V:ℤ) = d * (↑d -1) +1:=
+begin
+  sorry,
 end
 
 lemma le_one_of_pred_zero {n:ℕ}:
@@ -436,9 +443,10 @@ end
 
 theorem friendship_reg_adj_sq 
   (G:fin_graph V) (d:ℕ) (pos : 0<d) (hG : friendship G) (hd : regular_graph G d) :
-(adjacency_matrix G)*(adjacency_matrix G) = matrix_J V + (d-1)•1 :=
+(adjacency_matrix G)^2 = matrix_J V + (d-1)•1 :=
 begin
   -- intro hG,
+  rw pow_two,
   ext,
   by_cases i=j,
   { rw ←  h,
@@ -518,18 +526,17 @@ begin
   apply finset.mem_univ,
   rw herase,
   
-  --the following line was missing
   unfold regular_graph at hd,
   unfold degree at hd,
   rw hd,
 
-  rw ← neighbor_iff_adjacent,
+  {rw ← neighbor_iff_adjacent,
   rw h',
   rw finset.mem_erase,
   split,
   symmetry,
   apply h,
-  apply finset.mem_univ,
+  apply finset.mem_univ,}
 end
 
 lemma deg_le_two_friendship_has_pol 
@@ -618,27 +625,62 @@ end
 
 -- end
 
+def matrix_mod (V : Type* ) [fintype V] (p:ℕ) : matrix V V ℤ →+* matrix V V (zmod p):=
+begin
+  refine ring_hom.mk (matrix_compose (coe:ℤ → zmod p)) _ _ _ _; unfold matrix_compose,
+  {ext,
+  iterate 2 {rw matrix.one_val},
+  norm_cast,},
+  {intros x y,
+  ext,
+  simp,
+  norm_cast,
+  sorry
+  },
+  {sorry},
+  {sorry}
+end
+
 def matrix_J_mod_p (V)[fintype V](p:ℕ): matrix V V (zmod p):=
-  matrix_compose (coe:ℤ → zmod p) (matrix_J V)
+  (matrix_mod V p) (matrix_J V)
 
 lemma matrix_J_idem_mod_p
   {p:ℕ} (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
 (matrix_J_mod_p V p)^2 = (matrix_J_mod_p V p) :=
 begin
-  sorry
+  --unfold matrix_J_mod_p,
+  --rw ← ring_hom.map_pow,
+  --rw pow_two,
+  --transitivity (matrix_mod V p) (matrix.mul (fintype.card V) (matrix_J V)),
+  sorry,
+end
+
+lemma trace_mod (p:ℕ) (M: matrix V V ℤ):
+matrix.trace V (zmod p) (zmod p) (matrix_mod V p M) = (matrix.trace V ℤ ℤ M:zmod p):=
+begin
+  unfold matrix.trace,
+  change (finset.univ.sum ∘ (matrix.diag V (zmod p) (zmod p))) ((matrix_mod V p) M) =↑((finset.univ.sum ∘ (matrix.diag V ℤ ℤ).to_fun) M),
+  sorry,
 end
 
 lemma friendship_reg_adj_sq_mod_p
-  {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d)
+  {G:fin_graph V} {d:ℕ}{dpos:0<d} (hG : friendship G) (hd : regular_graph G d)
   {p:ℕ} (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
-(matrix_compose (coe:ℤ → zmod p) (adjacency_matrix G))^2 = matrix_J V:=
+(matrix_mod V p (adjacency_matrix G))^2 = matrix_mod V p (matrix_J V):=
 begin
-  sorry
+  rw ← ring_hom.map_pow,
+  rw friendship_reg_adj_sq G d dpos hG hd,
+  rw ring_hom.map_add (matrix_mod V p) (matrix_J V) _,
+  have h:(matrix_mod V p) ((d - 1) • 1)=0,
+  {ext,
+  sorry,
+  },
+  {rw h, ring,}
 end
 
 lemma tr_pth_power_mod_p
-  {p:ℕ} (M:V → V → (zmod p)) (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
-matrix.trace (M^p) = (matrix.trace M)^p:=
+  {p:ℕ} (M:matrix V V (zmod p)) (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
+matrix.trace V (zmod p) (zmod p) (M ^ p) = (matrix.trace V (zmod p)(zmod p) M)^p:=
 begin
   sorry
 end
@@ -651,7 +693,25 @@ begin
   have dpos : 0<d := by linarith,
   have hadj:=friendship_reg_adj_sq G d dpos hG,
   have traceless:=adj_mat_traceless G,
+  have cardV:=friendship_reg_card' hG hd,
+  let p:ℕ:=(d-1).min_fac,
+  have p_dvd_d_pred:p ∣ d-1:=(d-1).min_fac_dvd,
+  have p_dvd_V_pred:↑p ∣ ((fintype.card V:ℤ)-1),
+  {transitivity ↑(d-1),
+  {rw int.coe_nat_dvd,
+  apply p_dvd_d_pred,},
+  {transitivity ((d:ℤ)-1),
+  {sorry},
+  {
+  rw cardV,
+  existsi (d:ℤ),
+  ring,
+  }
+  }
+  },
+  have trace_0:= tr_pth_power_mod_p (matrix_mod V p (adjacency_matrix G)) (p_dvd_V_pred),
   sorry,
+
 end
 
 theorem friendship_theorem {G:fin_graph V} (hG : friendship G):
