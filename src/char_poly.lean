@@ -16,22 +16,38 @@ open polynomial
 --open_locale classical
 noncomputable theory
 
-variables {n : Type*} [fintype n] [inhabited n] [decidable_eq n] {R : Type*} [integral_domain R] [decidable_eq R]
+variables {n : Type*} [fintype n] [inhabited n] [decidable_eq n] {R : Type*} [comm_ring R] --[decidable_eq R]
 
 def char_poly (M : matrix n n R) : polynomial R :=
   matrix.det (λ (i j : n), (ite (i=j) X 0)-C(M i j))
 
+variable [integral_domain R]
+
 def poly_of_perm (M : matrix n n R) (σ : equiv.perm n) : polynomial R :=
   (σ.sign) * finset.univ.prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i)))
 
-lemma nat_degree_of_mat_val (M : matrix n n R) (σ : equiv.perm n) (i j:n) :
+lemma nat_degree_of_mat_val  (M : matrix n n R) (σ : equiv.perm n) (i j:n) :
   ((ite (i=j) X 0)-C(M i j)).nat_degree = ite (i=j) 1 0 :=
 begin
   by_cases i=j,
   {
   repeat {rw if_pos h},
   have pos:1>0, omega,
+  change (X + (-C (M i j))).nat_degree = 1,
+  rw add_comm,
+  rw ← polynomial.C_neg,
   rw ← polynomial.degree_eq_iff_nat_degree_eq_of_pos pos,
+  rw with_bot.coe_one,
+  transitivity X.degree,
+  {apply polynomial.degree_add_eq_of_degree_lt,
+  rw degree_X,
+  have leqzero:(C (-M i j)).degree≤ 0:= polynomial.degree_C_le,
+  rw le_iff_eq_or_lt at leqzero,
+  cases leqzero with eqzero ltzero,
+  --rw eqzero,
+  sorry,
+  sorry,
+  },
   simp,
   },
   repeat {rw if_neg h},
@@ -45,7 +61,9 @@ begin
   sorry,
 end
 
-lemma deg_poly_of_perm (M : matrix n n R) (σ : equiv.perm n) : 
+variable [decidable_eq R]
+
+lemma deg_poly_of_perm (M : matrix n n R) (σ : equiv.perm n): 
   (poly_of_perm M σ).nat_degree ≤ (finset.filter (λ x : n, σ x = x) finset.univ).card:=
 begin
   unfold poly_of_perm,
