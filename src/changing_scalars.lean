@@ -59,7 +59,7 @@ begin
     repeat {rw matrix.mul_eq_mul},
     repeat {rw matrix.mul_val},
     rw ← coe_add_monoid_hom,
-    repeat {rw add_monoid_hom.map_sum ↑f _ finset.univ},
+    repeat {rw add_monoid_hom.map_sum},
     rw coe_add_monoid_hom,
     refine congr rfl _,
     ext,
@@ -100,9 +100,8 @@ matrix.diag n β β (matrix.ring_hom_apply f M) = f ∘ (matrix.diag n α α) M 
 begin
   ext,
   rw matrix.ring_hom_apply,
-  change (matrix.diag n β β) ((matrix.fun_apply f) M) x = (f ∘ (matrix.diag n α α) M) x,
+  dsimp,
   rw matrix.fun_apply,
-  simp,
 end
 
 def matrix.ring_hom_apply.trace
