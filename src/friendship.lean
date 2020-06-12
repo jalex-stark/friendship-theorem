@@ -1,5 +1,6 @@
 import data.zmod.basic 
 import adjacency_matrix sym_matrix double_counting old_double_counting data.fintype.basic
+import changing_scalars
 import tactic
 
 open_locale classical
@@ -329,7 +330,7 @@ begin
   rw h,
   simpa,
 end
--- CR jstark: rename this lemma, it doesn't depend on friendship
+
 lemma reg_card_count_3 
   {G:fin_graph V} {d:ℕ} (hd : regular_graph G d) (v:V) :
 card_edges (path_bigraph G (neighbors G v) finset.univ) = d * d :=
@@ -397,7 +398,13 @@ theorem friendship_reg_card'
   {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
 (fintype.card V:ℤ) = d * (↑d -1) +1:=
 begin
-  sorry,
+  rw mul_sub, norm_cast, rw ← friendship_reg_card hG hd,
+  have : 0 ≠ fintype.card V, 
+  {   have v := arbitrary V,
+  unfold fintype.card, 
+  have : v ∈ @finset.univ V _, simp,
+  symmetry, exact finset.card_ne_zero_of_mem this },
+  push_cast, ring, norm_cast, omega,
 end
 
 lemma le_one_of_pred_zero {n:ℕ}:
@@ -430,16 +437,6 @@ begin
   rw nat.succ_eq_add_one, push_cast,
   rw ← hk, rw add_smul, simp,
 end
-
-
-example (d : ℕ)
-  (pos : 0 < d) :
-  (d:ℤ) = 1 + ↑(d - 1) :=
-begin
-  cases d, {norm_num at pos},
-  simp; ring,
-end
-
 
 theorem friendship_reg_adj_sq 
   (G:fin_graph V) (d:ℕ) (pos : 0<d) (hG : friendship G) (hd : regular_graph G d) :
@@ -624,34 +621,42 @@ end
   
 
 -- end
-
-def matrix_mod (V : Type* ) [fintype V] (p:ℕ) : matrix V V ℤ →+* matrix V V (zmod p):=
+#check matrix_compose
+example (p : ℕ) : ring_hom ℤ (zmod p) :=
 begin
-  refine ring_hom.mk (matrix_compose (coe:ℤ → zmod p)) _ _ _ _; unfold matrix_compose,
-  {ext,
-  iterate 2 {rw matrix.one_val},
-  norm_cast,},
-  {intros x y,
-  ext,
-  simp,
-  norm_cast,
-  sorry
-  },
-  {sorry},
-  {sorry}
+exact int.cast_ring_hom (zmod p),
 end
+
+
+def matrix_mod (V : Type* ) [fintype V] (p:ℕ) : matrix V V ℤ →+* matrix V V (zmod p) :=
+matrix.ring_hom_apply (int.cast_ring_hom (zmod p))
+
 
 def matrix_J_mod_p (V)[fintype V](p:ℕ): matrix V V (zmod p):=
   (matrix_mod V p) (matrix_J V)
+
+
+lemma matrix_J_sq :
+(matrix_J V)^2 = (fintype.card V : ℤ) • (matrix_J V) :=
+begin
+  rw pow_two,
+  rw matrix.mul_eq_mul, ext, rw matrix.mul_val,
+  unfold matrix_J,
+  simp; refl,
+end
 
 lemma matrix_J_idem_mod_p
   {p:ℕ} (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
 (matrix_J_mod_p V p)^2 = (matrix_J_mod_p V p) :=
 begin
-  --unfold matrix_J_mod_p,
-  --rw ← ring_hom.map_pow,
-  --rw pow_two,
-  --transitivity (matrix_mod V p) (matrix.mul (fintype.card V) (matrix_J V)),
+  unfold matrix_J_mod_p,
+  rw ← ring_hom.map_pow,
+  rw matrix_J_sq,
+  have : matrix_J V = (1:ℤ) • matrix_J V, {ext, simp},
+  conv_rhs { rw this }, clear this,
+  unfold matrix_mod,
+  apply matrix.ring_hom_apply.smul,
+  -- remaining goal is ⇑(int.cast_ring_hom (zmod p)) ↑(fintype.card V) = ⇑(int.cast_ring_hom (zmod p)) 1
   sorry,
 end
 
@@ -675,7 +680,7 @@ begin
   {ext,
   sorry,
   },
-  {rw h, ring,}
+  {rw h, ring},
 end
 
 lemma tr_pth_power_mod_p

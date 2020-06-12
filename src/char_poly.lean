@@ -16,7 +16,8 @@ open polynomial
 --open_locale classical
 noncomputable theory
 
-variables {n : Type*} [fintype n] [inhabited n] [decidable_eq n] {R : Type*} [comm_ring R] --[decidable_eq R]
+variables {n : Type*} [fintype n] [inhabited n] [decidable_eq n] 
+variables {R : Type*} [comm_ring R] [nonzero R] --[decidable_eq R]
 
 def char_poly (M : matrix n n R) : polynomial R :=
   matrix.det (λ (i j : n), (ite (i=j) X 0)-C(M i j))
@@ -165,7 +166,6 @@ begin
   have h2 := degree_lt_of_degree_le_nat_lt ineq h1,
   have h3 := polynomial.coeff_eq_zero_of_degree_lt h2,
   rw h3,
-  rw zero_add,
   sorry,
 end
 

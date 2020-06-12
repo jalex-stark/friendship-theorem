@@ -6,14 +6,6 @@ noncomputable theory
 def prop_to_nat: Prop → ℕ:=
   λ (p:Prop), ite p 1 0
 
-def prop_two_nat: Prop → ℕ:=
-begin
-  intro p,
-  by_cases p,
-  exact 1,
-  exact 0,
-end
-
 @[simp] lemma true_to_nat {p: Prop} (hpos:p):
   prop_to_nat p = 1:= if_pos hpos
 

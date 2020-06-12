@@ -82,3 +82,19 @@ end
 lemma matrix.ring_hom_apply_to_fun [ring α] [ring β] (f: α →+* β) (M : matrix n n α) : 
 (matrix.ring_hom_apply f).to_fun M = (matrix.fun_apply f) M:= rfl
 
+def matrix.ring_hom_apply.smul 
+  [ring α] [ring β] (f: α →+* β) (M : matrix n n α) {a₁ a₂ : α} (ha : f a₁ = f a₂) : 
+(matrix.ring_hom_apply f) (a₁ • M) = (matrix.ring_hom_apply f) (a₂ • M) :=
+begin
+  sorry
+end
+#check matrix.trace
+def matrix.ring_hom_apply.trace
+  [ring α] [ring β] (f: α →+* β) (M : matrix n n α) : 
+-- matrix.trace n α α $ matrix.ring_hom_apply f M = f (matrix.trace _ _ _ M) :=
+matrix.trace n β β (matrix.ring_hom_apply f M) = f (matrix.trace n α α M) :=
+begin
+  simp only [matrix.trace_diag, matrix.diag_apply], 
+  sorry
+  -- rw finset.sum_hom,
+end

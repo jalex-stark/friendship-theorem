@@ -84,5 +84,3 @@ end
 
 def matrix_J (m:Type*) [fintype m] : matrix m m ℤ :=
   λ (i j:m), 1
-
-
