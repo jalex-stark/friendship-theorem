@@ -612,7 +612,7 @@ end
 
 lemma tr_pow_p_mod_p
   {p:ℕ} [fact p.prime] (M:matrix V V (zmod p)) (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
-matrix.trace V (zmod p) (zmod p) (M ^ p) = (matrix.trace V (zmod p)(zmod p) M)^p:=
+matrix.trace V (zmod p) (zmod p) (M ^ p) = (matrix.trace V (zmod p)(zmod p) M)^p :=
 begin
   rw trace_from_char_poly M,
   rw trace_from_char_poly (M^p),
@@ -620,14 +620,9 @@ begin
   rw pow_p_eq_mod_p,
 end
 
-example (d : ℕ) (h : 0 < d) : coe (d - 1) = (d : ℤ) - 1 :=
-begin
-norm_cast,
-end
-
 ---I've included [fact ((d-1).min_fac).prime] in the assumptions, because I don't know how to get tr_pow_p_mod_p to recognize the instances I make in the lemma
 lemma three_le_deg_friendship_contra 
-  {G:fin_graph V} {d:ℕ} [fact ((d-1).min_fac).prime] (hG : friendship G) (hd : regular_graph G d) :
+  {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
 3 ≤ d → false :=
 begin
   intro h,
@@ -641,31 +636,39 @@ begin
   have p_dvd_V_pred:↑p ∣ ((fintype.card V:ℤ)-1),
   { transitivity ↑(d-1), {rwa int.coe_nat_dvd},
     use d, rw [d_cast, cardV], ring },
-  have neq1 : d-1 ≠ 1 := by sorry,
+  have neq1 : d-1 ≠ 1 := by linarith,
   have pprime : p.prime := nat.min_fac_prime neq1,
-  have trace_0:= tr_pow_p_mod_p (matrix_mod V p (adjacency_matrix G)) (p_dvd_V_pred),
+  have trace_0:= @tr_pow_p_mod_p  V _ _ _ pprime (matrix_mod V p (adjacency_matrix G)) (p_dvd_V_pred),
   have := trace_mod p (adjacency_matrix G), rw traceless at this, rw this at trace_0, clear this,
   have eq_J : (matrix_mod V p (adjacency_matrix G)) ^ p = matrix_mod V p (matrix_J V),
   {
     apply friendship_reg_adj_pow_mod_p hG hd,
-    {
-      rw ← d_cast,
+    { rw ← d_cast,
       rw int.coe_nat_dvd,
-      apply p_dvd_d_pred,
-    },
-    {
-      apply nat.prime.two_le pprime,
-    }
-    sorry,
+      apply p_dvd_d_pred},
+    { apply nat.prime.two_le pprime},
+    assumption,
   },
-  rw eq_J at trace_0,
-  rw trace_mod at trace_0,
-  rw trace_J V at trace_0,
-  norm_num at trace_0,
-  rw zero_pow at trace_0,
-  sorry,
-
+  contrapose! trace_0, clear trace_0,
+  rw eq_J,
+  rw trace_mod,
+  rw trace_J V,
+  norm_num,
+  have p_pos : 0 < p, 
+  linarith [nat.prime.two_le pprime],
+  rw zero_pow p_pos,
+  suffices key :  ↑(fintype.card V) = (1 : zmod p), 
+  {rw key, change (1:zmod p) ≠ 0, sorry },
+  cases p_dvd_V_pred with k hk,
+  
+  lift k to ℕ, 
+  { rw sub_eq_iff_eq_add at hk, norm_cast at hk, rw hk, simp },
+  have p_pos' : (0 : ℤ) < p := by exact_mod_cast p_pos,
+  apply nonneg_of_mul_nonneg_left _ p_pos',
+  rw [← hk, cardV], norm_cast,
+  sorry
 end
+
 
 theorem friendship_theorem {G:fin_graph V} (hG : friendship G):
   exists_politician G:=
