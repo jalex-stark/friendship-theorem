@@ -84,3 +84,15 @@ end
 
 def matrix_J (m:Type*) [fintype m] : matrix m m ℤ :=
   λ (i j:m), 1
+
+lemma trace_J (m:Type*) [fintype m] :
+matrix.trace m ℤ ℤ (matrix_J m) = fintype.card m :=
+begin
+  rw matrix.trace,
+  rw matrix_J,
+  change (finset.univ.sum ∘ ⇑(matrix.diag m ℤ ℤ)) (λ (i j : m), 1) =
+    ↑(fintype.card m),
+  rw function.comp_apply,
+  rw fintype.card,
+  simp,
+end

@@ -10,6 +10,7 @@ import linear_algebra.determinant
 import data.polynomial
 import ring_theory.polynomial
 import data.equiv.basic
+import data.zmod.basic
 
 open polynomial
 
@@ -176,4 +177,14 @@ begin
   sorry,
 end
 
+lemma poly_pow_p_char_p  {p : ℕ} [char_p R p] (f : polynomial R) :
+f ^ p = f.comp (polynomial.X ^ p) :=
+begin
+  sorry
+end
 
+lemma char_poly_pow_p_char_p {p : ℕ} [char_p R p] (M : matrix n n R) :
+char_poly (M ^ p) = char_poly M :=
+begin
+  sorry
+end

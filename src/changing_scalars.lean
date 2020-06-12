@@ -86,7 +86,23 @@ def matrix.ring_hom_apply.smul
   [ring α] [ring β] (f: α →+* β) (M : matrix n n α) {a₁ a₂ : α} (ha : f a₁ = f a₂) : 
 (matrix.ring_hom_apply f) (a₁ • M) = (matrix.ring_hom_apply f) (a₂ • M) :=
 begin
-  sorry
+  ext,
+  change (matrix.ring_hom_apply f).to_fun (a₁ • M) i j = (matrix.ring_hom_apply f).to_fun (a₂ • M) i j,
+  repeat {rw matrix.ring_hom_apply_to_fun},
+  repeat {rw matrix.fun_apply},
+  simp only [matrix.smul_val, ring_hom.map_mul],
+  rw ha,
+end
+
+lemma matrix.ring_hom_apply.diag [ring α] [ring β] (f: α →+* β) (M : matrix n n α) : 
+-- matrix.trace n α α $ matrix.ring_hom_apply f M = f (matrix.trace _ _ _ M) :=
+matrix.diag n β β (matrix.ring_hom_apply f M) = f ∘ (matrix.diag n α α) M :=
+begin
+  ext,
+  rw matrix.ring_hom_apply,
+  change (matrix.diag n β β) ((matrix.fun_apply f) M) x = (f ∘ (matrix.diag n α α) M) x,
+  rw matrix.fun_apply,
+  simp,
 end
 
 def matrix.ring_hom_apply.trace
@@ -95,6 +111,6 @@ def matrix.ring_hom_apply.trace
 matrix.trace n β β (matrix.ring_hom_apply f M) = f (matrix.trace n α α M) :=
 begin
   simp only [matrix.trace_diag, matrix.diag_apply], 
-  sorry
-  -- rw finset.sum_hom,
+  rw matrix.ring_hom_apply.diag,
+  rw finset.sum_hom,
 end

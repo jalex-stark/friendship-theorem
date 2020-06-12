@@ -3,6 +3,8 @@ import adjacency_matrix sym_matrix double_counting old_double_counting data.fint
 import changing_scalars
 import data.int.modeq
 import tactic
+import char_poly
+import number_theory.quadratic_reciprocity
 
 open_locale classical
 noncomputable theory
@@ -514,7 +516,12 @@ begin
   conv_rhs { rw this }, clear this,
   unfold matrix_mod,
   apply matrix.ring_hom_apply.smul,
-  have : fintype.card V ≠ 0 := by {sorry},
+  have : fintype.card V ≠ 0 ,
+  {
+    intro h,
+    rw fintype.card_eq_zero_iff at h,
+    apply h (arbitrary V),
+  },
   have : ∃ k, fintype.card V = k + 1, 
     {cases fintype.card V, tauto, use n}, 
   cases this with k hk, rw hk at *, 
@@ -526,10 +533,9 @@ end
 lemma trace_mod (p:ℕ) (M: matrix V V ℤ):
 matrix.trace V (zmod p) (zmod p) (matrix_mod V p M) = (matrix.trace V ℤ ℤ M : zmod p):=
 begin
-
-  unfold matrix_mod, 
-  change (finset.univ.sum ∘ (matrix.diag V (zmod p) (zmod p))) ((matrix_mod V p) M) =↑((finset.univ.sum ∘ (matrix.diag V ℤ ℤ).to_fun) M),
-  sorry,
+  rw matrix_mod,
+  rw matrix.ring_hom_apply.trace (int.cast_ring_hom (zmod p)) M,
+  refl,
 end
 
 lemma friendship_reg_adj_sq_mod_p
@@ -549,18 +555,79 @@ begin
   cases hp with k hk, rw hk, simp,
 end
 
-lemma tr_pth_power_mod_p
-  {p:ℕ} (M:matrix V V (zmod p)) (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
+lemma friendship_reg_adj_mul_J_mod_p
+  {G:fin_graph V} {d:ℕ} {dpos:0<d} (hG : friendship G) (hd : regular_graph G d)
+  {p:ℕ} (hp : ↑p ∣ (d: ℤ ) - 1) :
+(matrix_mod V p (adjacency_matrix G)).mul (matrix_mod V p (matrix_J V)) = matrix_mod V p (matrix_J V):=
+begin
+  sorry,
+end
+
+lemma friendship_reg_adj_pow_mod_p
+  {G:fin_graph V} {d:ℕ} {dpos:0<d} (hG : friendship G) (hd : regular_graph G d)
+  {p:ℕ} (hp : ↑p ∣ (d: ℤ ) - 1) {k : ℕ} (hk : 2 ≤ k):
+(matrix_mod V p (adjacency_matrix G)) ^ k = matrix_mod V p (matrix_J V):=
+begin
+  iterate 2 {cases k with k, { exfalso, linarith,},},
+  induction k with k hind,
+  {
+    apply friendship_reg_adj_sq_mod_p hG hd hp,
+    exact dpos,
+  },
+  {
+    rw pow_succ,
+    have h2 : 2 ≤ k.succ.succ := by omega,
+    have hind2 := hind h2,
+    rw hind2,
+    apply friendship_reg_adj_mul_J_mod_p hG hd hp,
+    exact dpos,
+  }
+end
+
+lemma pow_p_eq_mod_p {p : ℕ} [fact p.prime] (a : zmod p):
+a ^ p = a :=
+begin
+  have htwo : 2 ≤ p := by {apply nat.prime.two_le, assumption},
+  by_cases a = 0,
+  {
+    rw h,
+    apply zero_pow,
+    omega,
+  },
+  {
+    have neq : a ≠ 0 := by assumption,
+    transitivity a ^ (p - 1 + 1),
+    {
+      refine congr rfl _,
+      omega,
+    },
+    {
+      have hpow:= pow_succ a (p-1),
+      rw zmod.fermat_little p neq at hpow,
+      rw hpow,
+      rw mul_one,
+    }
+  }
+end
+
+lemma tr_pow_p_mod_p
+  {p:ℕ} [fact p.prime] (M:matrix V V (zmod p)) (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
 matrix.trace V (zmod p) (zmod p) (M ^ p) = (matrix.trace V (zmod p)(zmod p) M)^p:=
 begin
-  sorry
+  rw trace_from_char_poly M,
+  rw trace_from_char_poly (M^p),
+  rw char_poly_pow_p_char_p,
+  rw pow_p_eq_mod_p,
 end
+
 example (d : ℕ) (h : 0 < d) : coe (d - 1) = (d : ℤ) - 1 :=
 begin
 norm_cast,
 end
+
+---I've included [fact ((d-1).min_fac).prime] in the assumptions, because I don't know how to get tr_pow_p_mod_p to recognize the instances I make in the lemma
 lemma three_le_deg_friendship_contra 
-  {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
+  {G:fin_graph V} {d:ℕ} [fact ((d-1).min_fac).prime] (hG : friendship G) (hd : regular_graph G d) :
 3 ≤ d → false :=
 begin
   intro h,
@@ -570,13 +637,32 @@ begin
   have cardV:=friendship_reg_card' hG hd,
   let p:ℕ:=(d-1).min_fac,
   have p_dvd_d_pred:p ∣ d-1:=(d-1).min_fac_dvd,
-  have p_dvd_V_pred:↑p ∣ ((fintype.card V:ℤ)-1),
   have d_cast : coe (d - 1) = (d : ℤ) - 1 := by norm_cast,
+  have p_dvd_V_pred:↑p ∣ ((fintype.card V:ℤ)-1),
   { transitivity ↑(d-1), {rwa int.coe_nat_dvd},
     use d, rw [d_cast, cardV], ring },
-  have trace_0:= tr_pth_power_mod_p (matrix_mod V p (adjacency_matrix G)) (p_dvd_V_pred),
+  have neq1 : d-1 ≠ 1 := by sorry,
+  have pprime : p.prime := nat.min_fac_prime neq1,
+  have trace_0:= tr_pow_p_mod_p (matrix_mod V p (adjacency_matrix G)) (p_dvd_V_pred),
   have := trace_mod p (adjacency_matrix G), rw traceless at this, rw this at trace_0, clear this,
-  -- norm_num at trace_0,
+  have eq_J : (matrix_mod V p (adjacency_matrix G)) ^ p = matrix_mod V p (matrix_J V),
+  {
+    apply friendship_reg_adj_pow_mod_p hG hd,
+    {
+      rw ← d_cast,
+      rw int.coe_nat_dvd,
+      apply p_dvd_d_pred,
+    },
+    {
+      apply nat.prime.two_le pprime,
+    }
+    sorry,
+  },
+  rw eq_J at trace_0,
+  rw trace_mod at trace_0,
+  rw trace_J V at trace_0,
+  norm_num at trace_0,
+  rw zero_pow at trace_0,
   sorry,
 
 end
