@@ -1,13 +1,14 @@
 import data.zmod.basic 
 import adjacency_matrix sym_matrix double_counting old_double_counting data.fintype.basic
 import changing_scalars
+import data.int.modeq
 import tactic
 
 open_locale classical
 noncomputable theory
 
 lemma exists_unique_rewrite {X:Type*} {p: X → Prop} {q: X → Prop}:
-  (∀ x:X,p(x)↔ q(x))→ (∃!x:X,p(x)) → ∃!x:X, q(x):= 
+  (∀ x:X, p x ↔ q x) → (∃!x : X, p x) → ∃!x:X, q x:= 
 begin
   rw exists_unique_congr,
   intros iff exun,
@@ -27,18 +28,12 @@ G.E v u ∧ G.E w u
 def friendship (G : fin_graph V) : Prop :=
 ∀ v w : V, v ≠ w → ∃!(u : V), is_friend G v w u
 
-@[simp] lemma friend_symm {G:fin_graph V}{v w x:V}:
+@[simp] lemma friend_symm {G:fin_graph V} {v w x:V}:
   G.E v x ∧ G.E x w ↔ G.E v x ∧ G.E w x:=
 begin
-  split,
-  intro h,
-  split,
-  apply h.left,
-  apply G.undirected h.right,
-  intro h,
-  split,
-  apply h.left,
-  apply G.undirected h.right,
+  split; try {intro a, cases a, split}; 
+  try {assumption}; 
+  {apply G.undirected, assumption},
 end
 
 def find_friend (G:fin_graph V)(friendG: friendship G)(v w:V)(vneqw:v ≠ w):V:=
@@ -56,25 +51,10 @@ begin
   apply (find_friend_spec G friendG v w vneqw),
 end
 
-lemma friendship' (G:fin_graph V){friendG: friendship G}{v w:V}:
-  v ≠ w → exists_unique (is_friend G v w):=
-begin
-  unfold exists_unique,
-  intro vneqw,
-  use find_friend G friendG v w vneqw,
-  split,
-  exact find_friend_spec G friendG v w vneqw,
-  unfold is_friend,
-  intros,
-  apply exists_unique.unique (friendG v w vneqw),
-  exact a,
-  exact find_friend_spec G friendG v w vneqw,
-end
-
-def exists_politician (G:fin_graph V):Prop:=
+def exists_politician (G:fin_graph V) : Prop :=
   ∃ v:V, ∀ w:V, v=w ∨ G.E v w
 
-def no_pol (G:fin_graph V):Prop:=
+def no_pol (G:fin_graph V) : Prop :=
   ∀ v:V, ∃ w:V, v ≠ w ∧ ¬ G.E v w
 
 lemma exists_pol_of_not_no_pol {G:fin_graph V}:
@@ -82,115 +62,91 @@ lemma exists_pol_of_not_no_pol {G:fin_graph V}:
 begin
   unfold no_pol,
   unfold exists_politician,
-  rw classical.not_forall,
-  apply exists_congr,
-  intro a,
-  rw ← not_exists_not,
-  apply not_congr,
-  apply exists_congr,
-  intro b,
-  rw ← not_or_distrib,
+  push_neg, refl,
 end
 
-def path_bigraph (G:fin_graph V)(A B:finset V):bigraph V V:=
+def path_bigraph (G : fin_graph V) (A B:finset V) : bigraph V V:=
   bigraph.mk A B G.E
 
-lemma path_bigraph_swap {G: fin_graph V}{A B:finset V}:
+lemma path_bigraph_swap {G : fin_graph V} {A B : finset V} :
   (path_bigraph G A B).swap = path_bigraph G B A:=
 begin
-  ext,
-  refl,
-  refl,
-  split,
-  apply G.undirected,
-  apply G.undirected,
+  ext, {refl}, {refl},
+  split; apply G.undirected,
 end
 
-def friends (G:fin_graph V)(v w:V):finset V:=
+def friends (G : fin_graph V)(v w : V) : finset V :=
   finset.filter (is_friend G v w) (finset.univ:finset V)
 
-lemma friends_eq_inter_neighbors {G:fin_graph V}{v w:V}:
+lemma friends_eq_inter_neighbors {G : fin_graph V} {v w : V} :
   friends G v w = neighbors G v ∩ neighbors G w:=
 begin
   ext,
-  rw finset.mem_inter,
-  unfold friends,
-  rw finset.mem_filter,
-  unfold is_friend,
-  simp,
+  rw finset.mem_inter, erw finset.mem_filter,
+  unfold is_friend, simp,
 end
 
-lemma friends_size_one {G:fin_graph V}{v w:V}:
-  friendship G → v ≠ w → (friends G v w).card=1:=
+lemma friendship' {G : fin_graph V} (friendG : friendship G) {v w : V} (hvw : v ≠ w):
+exists_unique (is_friend G v w) :=
 begin
-  intros fG vneqw,
+  unfold exists_unique,
+  use find_friend G friendG v w hvw,
+  split,
+  exact find_friend_spec G friendG v w hvw,
+  unfold is_friend,
+  intros x hx,
+  apply exists_unique.unique (friendG v w hvw) hx,
+  exact find_friend_spec G friendG v w hvw,
+end
+
+lemma friends_size_one {G : fin_graph V} (friendG : friendship G) {v w : V} (hvw : v ≠ w) :
+  (friends G v w).card = 1 :=
+begin
   rw finset.card_eq_one,
   rw finset.singleton_iff_unique_mem,
-  unfold friends,
-  refine exists_unique_rewrite _ (fG v w vneqw),
-  intro x,
-  rw finset.mem_filter,
-  unfold is_friend,
-  split,
-  intro h,
-  split,
-  apply finset.mem_univ,
-  exact h,
-  tauto,
+  unfold friends, simp [friendship' friendG hvw],
 end
 
-lemma left_fiber_eq_nbrs_inter_A {G:fin_graph V}{A B: finset V}{v:V}:
+lemma left_fiber_eq_nbrs_inter_A {G : fin_graph V} {A B : finset V} {v : V} :
   v ∈ B → left_fiber (path_bigraph G A B) v = A ∩ (neighbors G v):=
 begin
-  intro vB,
-  ext,
-  simp,
+  intro vB, ext,
+  simp only [neighbor_iff_adjacent, mem_left_fiber, finset.mem_inter],
   change a ∈ A ∧ G.E a v ↔ a ∈ A ∧ G.E v a,
-  have h:G.E a v↔ G.E v a,
-  split,
-  apply G.undirected,
-  apply G.undirected,
+  have h : G.E a v ↔ G.E v a, {split; apply G.undirected},
   rw h,
 end
 
-lemma right_fiber_eq_nbrs_inter_B {G:fin_graph V}{A B: finset V}{v:V}:
-  v ∈ A → right_fiber (path_bigraph G A B) v = B ∩ (neighbors G v):=
+lemma right_fiber_eq_nbrs_inter_B {G : fin_graph V} {A B : finset V} {v : V} (hv : v ∈ A):
+right_fiber (path_bigraph G A B) v = B ∩ (neighbors G v):=
 begin
-  intro vA,
-  rw ← left_fiber_swap,
-  rw path_bigraph_swap,
-  apply left_fiber_eq_nbrs_inter_A,
-  exact vA,
+  rw [← left_fiber_swap, path_bigraph_swap],
+  exact left_fiber_eq_nbrs_inter_A hv,
 end
 
-lemma lunique_paths {G:fin_graph V}{v:V}{B: finset V}:
-  friendship G→ v∉ B→left_unique (path_bigraph G (neighbors G v) B):=
+lemma lunique_paths {G : fin_graph V} {v : V} {B : finset V} (hG : friendship G) (hv : v ∉ B):
+left_unique (path_bigraph G (neighbors G v) B) :=
 begin
-  intros fG vninB,
   rw left_unique_one_reg,
   unfold left_regular,
   intros b hb,
-  have hsub: left_fiber (path_bigraph G (neighbors G v) B) b = (neighbors G v) ∩ (neighbors G b),
+  have hsub : left_fiber (path_bigraph G (neighbors G v) B) b = (neighbors G v) ∩ (neighbors G b),
   apply left_fiber_eq_nbrs_inter_A hb,
   rw hsub,
   rw ← friends_eq_inter_neighbors,
-  apply friends_size_one fG,
-  intro veqb,
-  rw veqb at vninB,
-  change b ∈ B at hb,
-  apply vninB hb,
+  apply friends_size_one hG,
+  intro veqb, rw veqb at hv,
+  contradiction,
 end
 
-lemma runique_paths {G:fin_graph V}{v:V}{A: finset V}:
-  friendship G→ v∉ A→right_unique (path_bigraph G A (neighbors G v)):=
+lemma runique_paths {G:fin_graph V} {v : V} {A : finset V} (hG : friendship G) (hv : v ∉ A):
+right_unique (path_bigraph G A (neighbors G v)):=
 begin
-  intros fG vninA,
-  rw ← path_bigraph_swap,
-  rw right_unique_swap,
-  apply lunique_paths fG vninA,
+  rw [← path_bigraph_swap,right_unique_swap],
+  exact lunique_paths hG hv,
 end
 
-lemma counter_non_adj_deg_eq {G:fin_graph V}:
+lemma counter_non_adj_deg_eq {G : fin_graph V} :
   (friendship G ∧ no_pol G)→ ∀ v w :V, ¬ G.E v w → degree G v = degree G w:=
 begin
   intros hG v w hvw,
@@ -213,7 +169,7 @@ begin
   apply hvw,
 end
 
-theorem counter_reg {G:fin_graph V}:
+theorem counter_reg {G:fin_graph V} :
   (friendship G ∧ no_pol G)→ ∃ d:ℕ, regular_graph G d :=
 begin
   intro hG,
@@ -264,35 +220,24 @@ begin
 end
 
 
-theorem friendship_adj_sq_off_diag_eq_one (G:fin_graph V):
-  friendship G→ ∀ v w:V, v ≠ w → ((adjacency_matrix G)*(adjacency_matrix G)) v w = 1:=
+theorem friendship_adj_sq_off_diag_eq_one 
+  (G:fin_graph V) (hG : friendship G) {v w : V} (hvw : v ≠ w) :
+((adjacency_matrix G)^2) v w = 1 :=
 begin
-  intros friend v w distinct,
-  change (adjacency_matrix G).mul (adjacency_matrix G) v w = 1,
+  rw [pow_two,matrix.mul_eq_mul],
   rw mul_val_eq_dot_row_col,
   rw adjacency_matrix_row_ind,
   rw adjacency_matrix_col_ind,
   rw dot_inds_eq_card_inter,
-  unfold friendship at friend,
-  have h:∀ (x:V), (x ∈ (neighbors G v ∩ neighbors G w) ↔ G.E v x ∧ G.E w x),
-  intro u,
-  repeat {rw ← neighbor_iff_adjacent},
-  simp,
-  have hu := friend v w distinct,
-  have uexists:=hu.exists,
-  cases uexists with u uworks,
-  have singu : (neighbors G v ∩ neighbors G w)={u},
+  have h : ∀ x, x ∈ (neighbors G v ∩ neighbors G w) ↔ G.E v x ∧ G.E w x,
+  { intro u, repeat {rw ← neighbor_iff_adjacent}, simp },
+  rcases hG v w hvw with ⟨ u, hu, u_unique ⟩,
+  suffices singu : (neighbors G v ∩ neighbors G w)={u}, {rw singu, simp},
   apply finset.eq_singleton_iff_unique_mem.2,
-  split,
-  rw h u,
-  exact uworks,
-  intro x,
-  intro hx,
+  split, {rwa h u},
+  intros x hx,
   rw h at hx,
-  symmetry,
-  apply exists_unique.unique hu uworks hx,
-  rw singu,
-  simp,
+  apply u_unique, exact hx,
 end
 
 def two_path_from_v (G:fin_graph V) (v:V):(V × V → Prop):=
@@ -311,7 +256,6 @@ lemma friendship_reg_card_count_2
   {G:fin_graph V} {d:ℕ} (hd : regular_graph G d) (v:V) :
 card_edges (path_bigraph G (neighbors G v) {v}) = d :=
 begin
-  -- cases hG with friend reg,
   unfold regular_graph at hd,
   rw ← hd v,
   apply card_edges_of_runique,
@@ -335,7 +279,6 @@ lemma reg_card_count_3
   {G:fin_graph V} {d:ℕ} (hd : regular_graph G d) (v:V) :
 card_edges (path_bigraph G (neighbors G v) finset.univ) = d * d :=
 begin
-  -- cases hG with friend reg,
   unfold regular_graph at hd,
   unfold degree at hd,
 
@@ -395,7 +338,7 @@ begin
 end
 
 theorem friendship_reg_card'
-  {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
+  {G : fin_graph V} {d : ℕ} (hG : friendship G) (hd : regular_graph G d) :
 (fintype.card V:ℤ) = d * (↑d -1) +1:=
 begin
   rw mul_sub, norm_cast, rw ← friendship_reg_card hG hd,
@@ -407,19 +350,20 @@ begin
   push_cast, ring, norm_cast, omega,
 end
 
-lemma le_one_of_pred_zero {n:ℕ}:
-  n-1=0 → n ≤ 1:=
+lemma d_dvd_card_V 
+  {G : fin_graph V} {d : ℕ} (hG : friendship G) (hd : regular_graph G d)
+  {p : ℕ} (hp : p ∣ d - 1) :
+(p:ℤ) ∣ fintype.card V - 1 :=
 begin
-  cases n,
-  simp,
-  cases n,
-  simp,
-  rw ← nat.pred_eq_sub_one,
-  rw nat.pred_succ,
-  intro h,
-  exfalso,
-  apply nat.succ_ne_zero n h,
+  rw friendship_reg_card' hG hd, ring,
+  cases hp with k hk,
+  sorry
 end
+
+
+
+lemma le_one_of_pred_zero {n:ℕ}:
+  n-1=0 → n ≤ 1:= by omega
 
 -- local attribute [simp]
 -- lemma nat.smul_one (d : ℕ) : d • (1 : ℤ) = (d : ℤ) := 
@@ -438,55 +382,57 @@ begin
   rw ← hk, rw add_smul, simp,
 end
 
+local attribute [simp]
+lemma int.smul_one (d : ℤ) (R : Type*) [ring R] : d • (1 : R) = (d : R) := 
+begin
+  apply gsmul_one,
+end
+
+
 theorem friendship_reg_adj_sq 
   (G:fin_graph V) (d:ℕ) (pos : 0<d) (hG : friendship G) (hd : regular_graph G d) :
-(adjacency_matrix G)^2 = matrix_J V + (d-1)•1 :=
+(adjacency_matrix G)^2 = matrix_J V + (d-1:ℤ) • 1 :=
 begin
-  -- intro hG,
-  rw pow_two,
   ext,
   by_cases i=j,
-  { rw ←  h,
+  { rw [← h, pow_two],
     rw deg_from_adj_mat_sq,
     rw hd i,
     unfold matrix_J, 
     simp only [matrix.one_val_eq, nat.smul_one, matrix.add_val, pi.smul_apply],
     cases d, {norm_num at pos}, {simp; ring} },
   
-  rw friendship_adj_sq_off_diag_eq_one G hG i j h,
+  rw friendship_adj_sq_off_diag_eq_one G hG h,
   unfold matrix_J,
-  simp only [matrix.add_val, pi.smul_apply],
-  rw [matrix.one_val_ne h, smul_zero], ring,
+  simp [matrix.one_val_ne h],
 end
 
-lemma subsingleton_graph_has_pol {G:fin_graph V}:
+lemma subsingleton_graph_has_pol (G : fin_graph V) :
   fintype.card V ≤ 1 → exists_politician G:=
 begin
   intro subsing,
   rw fintype.card_le_one_iff at subsing,
-  let v:=_inst_2.default,
-  existsi v,
-  intro w,
-  left,
-  apply subsing v w,
+  use arbitrary V, intro w,
+  left, apply subsing,
 end
 
 lemma deg_le_one_friendship_has_pol 
-  {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d):
+  {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
 d ≤ 1 → exists_politician G :=
 begin
-  -- intros hG dleq1,
   intro d_le_one,
   have sq : d * d = d := by {interval_cases d; norm_num},
   
-  have hfr:=friendship_reg_card hG hd,
+  have hfr := friendship_reg_card hG hd,
   rw sq at hfr,
-  change fintype.card V - 1 + d = d+0 at hfr,
-  rw add_comm at hfr,
-  have hfr':= add_left_cancel hfr,
+  apply subsingleton_graph_has_pol, 
+  apply le_one_of_pred_zero,
+  linarith,
+end
 
-  apply subsingleton_graph_has_pol,
-  apply le_one_of_pred_zero hfr',
+lemma ne_of_edge {G : fin_graph V} {a b : V} (hab : G.E a b) : a ≠ b :=
+begin
+  intro h, rw h at hab, apply G.loopless b, exact hab,
 end
 
 lemma deg_two_friendship_has_pol 
@@ -497,43 +443,35 @@ begin
   rw deq2 at hd,
   have v := arbitrary V,
   have hfr:=friendship_reg_card hG hd,
-  have h2 : fintype.card V - 1 = 2 := by linarith,
+  have h2 : fintype.card V - 1 = 2 := by linarith, clear hfr,
+  -- now we have a degree two graph with three vertices
+  -- the math thing to do would be to replace it with the triangle graph
   
-  have herase:(finset.univ.erase v).card = fintype.card V-1,
-  apply finset.card_erase_of_mem,
-  apply finset.mem_univ,
-  rw h2 at herase,
+  have herase : (finset.univ.erase v).card = fintype.card V - 1,
+  { apply finset.card_erase_of_mem,
+    apply finset.mem_univ },
+  rw h2 at herase, clear h2,
 
-  existsi v,
-  intro w,
-  by_cases v=w,
-  left, exact h, right,
+  existsi v, intro w,
+  by_cases hvw : v = w, { left, exact hvw }, right,
+
   have h':neighbors G v = finset.univ.erase v,
   apply finset.eq_of_subset_of_card_le,
-  rw finset.subset_iff,
-  intro x,
-  rw neighbor_iff_adjacent,
-  rw finset.mem_erase,
-  intro h,
-  split,
-  intro hxv,
-  rw hxv at h,
-  apply G.loopless v,
-  exact h,
-  apply finset.mem_univ,
-  rw herase,
-  
-  unfold regular_graph at hd,
-  unfold degree at hd,
-  rw hd,
+  { rw finset.subset_iff,
+    intro x,
+    rw neighbor_iff_adjacent,
+    rw finset.mem_erase,
+    intro h,
+    split, { symmetry, exact ne_of_edge h },
+    apply finset.mem_univ },
 
-  {rw ← neighbor_iff_adjacent,
-  rw h',
-  rw finset.mem_erase,
-  split,
-  symmetry,
-  apply h,
-  apply finset.mem_univ,}
+  { rw herase,
+    unfold regular_graph at hd, unfold degree at hd,
+    rw hd },
+
+  { rw [← neighbor_iff_adjacent, h', finset.mem_erase],
+    split, { symmetry, exact hvw },
+    apply finset.mem_univ }
 end
 
 lemma deg_le_two_friendship_has_pol 
@@ -544,87 +482,6 @@ begin
   interval_cases d,
   iterate 2 { apply deg_le_one_friendship_has_pol hG hd, norm_num },
   { apply deg_two_friendship_has_pol hG hd, refl },
-end
-
-/-
-lemma eigenval_constraints_contra {n:Type*}[fintype n]{d:ℕ}{f:n → ℝ}{hd:d>2}:
-  (∃ a:n, f(a)=d ∧ ∀ b:n, a ≠ b → f(b)=real.sqrt(d-1)∨ f(b)=-real.sqrt(d-1)) → finset.univ.sum f ≠ 0:=
-begin
-  intro h,
-  intro contra,
-  cases h with a ha,
-  have hsum: finset.univ.sum f = (finset.univ.erase a).sum f+finset.sum {a} f,
-  rw ← finset.sum_union,
-  rw finset.erase_union_sing,
-  apply finset.mem_univ,
-
-  apply finset.erase_disj_sing,
-
-  simp at hsum,
-  rw ha.left at hsum,
-  rw hsum at contra,
-
-  have hfilter: finset.univ.erase a = finset.filter (λ x:n, f(x)=real.sqrt(d-1)) (finset.univ.erase a) ∪ finset.filter (λ x:n, f(x)=-real.sqrt(d-1)) (finset.univ.erase a),
-  rw ← finset.filter_or,
-  transitivity finset.filter (λ (_x : n), true) (finset.univ.erase a),
-  rw finset.filter_true,
-  apply finset.filter_congr,
-  intros x hx,
-  simp,
-  apply ha.right x,
-  intro aeqx,
-  rw aeqx at hx,
-  apply finset.ne_of_mem_erase hx,
-  refl,
-  have hfiltersum: (finset.univ.erase a).sum f = (finset.filter (λ x:n, f(x)=real.sqrt(d-1)) (finset.univ.erase a)).sum f + (finset.filter (λ x:n, f(x)=-real.sqrt(d-1)) (finset.univ.erase a)).sum f,
-  transitivity (finset.filter (λ x:n, f(x)=real.sqrt(d-1)) (finset.univ.erase a) ∪ finset.filter (λ x:n, f(x)=-real.sqrt(d-1)) (finset.univ.erase a)).sum f,
-  rw ← hfilter,
-  apply finset.sum_union,
-  rw finset.disjoint_iff_inter_eq_empty,
-  rw ← finset.filter_and,
-  rw ← finset.filter_false,
-  apply finset.filter_congr,
-  intros x hx,
-  simp,
-  intro hpos,
-  rw hpos,
-  intro contra2,
-  have h:real.sqrt(d-1)+(-real.sqrt(d-1))=0,
-  simp,
-  rw ← contra2 at h,
-  have h':real.sqrt(d-1)=0,
-  linarith,
-  have hsq:(d - 1:ℝ)=(0:ℝ),
-  transitivity real.sqrt(↑d - 1) * real.sqrt(↑d - 1),
-  symmetry,
-  apply real.mul_self_sqrt,
-  sorry,
-  sorry,
-  sorry,
-  sorry,
-
-end
--/
-
--- lemma exists_eigenbasis_of_sq_eq_J_plus_smul_id {n:Type*} [fintype n] {a:ℝ} {M: matrix n n ℝ}:
---   (M.mul M = (a • 1) + matrix_J n) → ∃ b: finset (n→ ℝ), is_eigenbasis M.to_lin ↑b ∧ ((λ x:n, (1:ℝ)) ∈ b):=
--- begin
---   intro Msq,
---   have pos_space:=eigenspace M.to_lin (real.sqrt a),
---   have neg_space:=eigenspace M.to_lin (- real.sqrt a),
---   have ex_pos_basis:=finite_dimensional.exists_is_basis_finite ℝ pos_space,
---   have ex_neg_basis:=finite_dimensional.exists_is_basis_finite ℝ neg_space,
---   cases ex_pos_basis with pos_basis_set h_pos_basis,
---   cases ex_neg_basis with neg_basis_set h_neg_basis,
---   have pos_basis:=h_pos_basis.right.to_finset,
---   have neg_basis:=h_neg_basis.right.to_finset,
-  
-
--- end
-#check matrix_compose
-example (p : ℕ) : ring_hom ℤ (zmod p) :=
-begin
-exact int.cast_ring_hom (zmod p),
 end
 
 
@@ -645,6 +502,7 @@ begin
   simp; refl,
 end
 
+
 lemma matrix_J_idem_mod_p
   {p:ℕ} (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
 (matrix_J_mod_p V p)^2 = (matrix_J_mod_p V p) :=
@@ -656,31 +514,39 @@ begin
   conv_rhs { rw this }, clear this,
   unfold matrix_mod,
   apply matrix.ring_hom_apply.smul,
-  -- remaining goal is ⇑(int.cast_ring_hom (zmod p)) ↑(fintype.card V) = ⇑(int.cast_ring_hom (zmod p)) 1
-  sorry,
+  have : fintype.card V ≠ 0 := by {sorry},
+  have : ∃ k, fintype.card V = k + 1, 
+    {cases fintype.card V, tauto, use n}, 
+  cases this with k hk, rw hk at *, 
+  push_cast at hp, ring at hp, 
+  norm_cast at hp, cases hp with d hd, rw hd,
+  simp,
 end
 
 lemma trace_mod (p:ℕ) (M: matrix V V ℤ):
-matrix.trace V (zmod p) (zmod p) (matrix_mod V p M) = (matrix.trace V ℤ ℤ M:zmod p):=
+matrix.trace V (zmod p) (zmod p) (matrix_mod V p M) = (matrix.trace V ℤ ℤ M : zmod p):=
 begin
-  unfold matrix.trace,
+
+  unfold matrix_mod, 
   change (finset.univ.sum ∘ (matrix.diag V (zmod p) (zmod p))) ((matrix_mod V p) M) =↑((finset.univ.sum ∘ (matrix.diag V ℤ ℤ).to_fun) M),
   sorry,
 end
 
 lemma friendship_reg_adj_sq_mod_p
-  {G:fin_graph V} {d:ℕ}{dpos:0<d} (hG : friendship G) (hd : regular_graph G d)
-  {p:ℕ} (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
+  {G:fin_graph V} {d:ℕ} {dpos:0<d} (hG : friendship G) (hd : regular_graph G d)
+  {p:ℕ} (hp : ↑p ∣ (d: ℤ ) - 1) :
 (matrix_mod V p (adjacency_matrix G))^2 = matrix_mod V p (matrix_J V):=
 begin
   rw ← ring_hom.map_pow,
   rw friendship_reg_adj_sq G d dpos hG hd,
   rw ring_hom.map_add (matrix_mod V p) (matrix_J V) _,
-  have h:(matrix_mod V p) ((d - 1) • 1)=0,
-  {ext,
-  sorry,
-  },
-  {rw h, ring},
+  suffices key : (matrix_mod V p) ( ((d - 1):ℤ) • 1) = (matrix_mod V p) ( (0:ℤ) • 1), 
+    { simp only [key, add_right_eq_self],
+      ext, unfold matrix_mod, unfold matrix.ring_hom_apply, 
+      dsimp, 
+      unfold matrix.fun_apply, simp },
+  apply matrix.ring_hom_apply.smul,
+  cases hp with k hk, rw hk, simp,
 end
 
 lemma tr_pth_power_mod_p
@@ -689,7 +555,10 @@ matrix.trace V (zmod p) (zmod p) (M ^ p) = (matrix.trace V (zmod p)(zmod p) M)^p
 begin
   sorry
 end
-
+example (d : ℕ) (h : 0 < d) : coe (d - 1) = (d : ℤ) - 1 :=
+begin
+norm_cast,
+end
 lemma three_le_deg_friendship_contra 
   {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
 3 ≤ d → false :=
@@ -702,19 +571,12 @@ begin
   let p:ℕ:=(d-1).min_fac,
   have p_dvd_d_pred:p ∣ d-1:=(d-1).min_fac_dvd,
   have p_dvd_V_pred:↑p ∣ ((fintype.card V:ℤ)-1),
-  {transitivity ↑(d-1),
-  {rw int.coe_nat_dvd,
-  apply p_dvd_d_pred,},
-  {transitivity ((d:ℤ)-1),
-  {sorry},
-  {
-  rw cardV,
-  existsi (d:ℤ),
-  ring,
-  }
-  }
-  },
+  have d_cast : coe (d - 1) = (d : ℤ) - 1 := by norm_cast,
+  { transitivity ↑(d-1), {rwa int.coe_nat_dvd},
+    use d, rw [d_cast, cardV], ring },
   have trace_0:= tr_pth_power_mod_p (matrix_mod V p (adjacency_matrix G)) (p_dvd_V_pred),
+  have := trace_mod p (adjacency_matrix G), rw traceless at this, rw this at trace_0, clear this,
+  -- norm_num at trace_0,
   sorry,
 
 end
@@ -734,9 +596,9 @@ begin
   -- exact dreg,
   have : d ≤ 2 ∨ 3 ≤ d := by omega, cases this,
   { have ex_pol : exists_politician G,
-  apply deg_le_two_friendship_has_pol hG dreg,
-  linarith,
-  apply exists_pol_of_not_no_pol.2 ex_pol npG},
+    apply deg_le_two_friendship_has_pol hG dreg,
+    linarith,
+    apply exists_pol_of_not_no_pol.2 ex_pol npG },
   
   apply three_le_deg_friendship_contra hG dreg, assumption,
-end
+end 

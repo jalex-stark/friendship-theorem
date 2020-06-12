@@ -88,7 +88,7 @@ def matrix.ring_hom_apply.smul
 begin
   sorry
 end
-#check matrix.trace
+
 def matrix.ring_hom_apply.trace
   [ring α] [ring β] (f: α →+* β) (M : matrix n n α) : 
 -- matrix.trace n α α $ matrix.ring_hom_apply f M = f (matrix.trace _ _ _ M) :=
