@@ -40,18 +40,12 @@ variable [decidable_eq n]
 def matrix.ring_hom_apply [ring α] [ring β] (f: α →+* β) : matrix n n α →+* matrix n n β :=
 begin
   refine ring_hom.mk (matrix.fun_apply f) _ _ _ _; unfold matrix.fun_apply,
-  {
-    ext,
+  { ext,
     repeat {rw matrix.one_val},
     by_cases i=j,
-    {
-      repeat {rw if_pos h},
-      rw ring_hom.map_one,
-    },
-    {
-      repeat {rw if_neg h},
-      rw ring_hom.map_zero,
-    },
+    { rw h, simp },
+    { repeat {rw if_neg h}, simp,
+      rw ring_hom.map_zero},
   },
   {
     intros M N,
@@ -95,7 +89,6 @@ begin
 end
 
 lemma matrix.ring_hom_apply.diag [ring α] [ring β] (f: α →+* β) (M : matrix n n α) : 
--- matrix.trace n α α $ matrix.ring_hom_apply f M = f (matrix.trace _ _ _ M) :=
 matrix.diag n β β (matrix.ring_hom_apply f M) = f ∘ (matrix.diag n α α) M :=
 begin
   ext,
@@ -106,7 +99,6 @@ end
 
 def matrix.ring_hom_apply.trace
   [ring α] [ring β] (f: α →+* β) (M : matrix n n α) : 
--- matrix.trace n α α $ matrix.ring_hom_apply f M = f (matrix.trace _ _ _ M) :=
 matrix.trace n β β (matrix.ring_hom_apply f M) = f (matrix.trace n α α M) :=
 begin
   simp only [matrix.trace_diag, matrix.diag_apply], 

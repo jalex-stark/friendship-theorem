@@ -284,14 +284,12 @@ begin
   unfold regular_graph at hd,
   unfold degree at hd,
 
-  transitivity d*(neighbors G v).card,
+  transitivity d * (neighbors G v).card,
   apply card_edges_of_rreg,
-  unfold right_regular,
   intros a ha,
   rw right_fiber_eq_nbrs_inter_B,
-  rw finset.univ_inter,
-  rw hd a,
-  exact ha,
+  { rw [finset.univ_inter, hd a] },
+  { exact ha },
   rw hd v,
 end
 
@@ -316,12 +314,11 @@ theorem friendship_reg_card
 (fintype.card V) - 1 + d = d * d :=
 begin
   have v:=arbitrary V,
-  have hv:v ∈ finset.univ,
-  apply finset.mem_univ,
+  have hv : v ∈ finset.univ,
+    {apply finset.mem_univ}, swap, {apply_instance},
 
   have un:(finset.erase finset.univ v)∪ {v}=finset.univ,
-  apply finset.erase_union_sing,
-  apply finset.mem_univ,
+  { apply finset.erase_union_sing hv},
 
   rw ← reg_card_count_3 hd v,
   rw ← un,
@@ -345,35 +342,27 @@ theorem friendship_reg_card'
 begin
   rw mul_sub, norm_cast, rw ← friendship_reg_card hG hd,
   have : 0 ≠ fintype.card V, 
-  {   have v := arbitrary V,
-  unfold fintype.card, 
-  have : v ∈ @finset.univ V _, simp,
-  symmetry, exact finset.card_ne_zero_of_mem this },
+  { have v := arbitrary V,
+    unfold fintype.card, 
+    have : v ∈ @finset.univ V _, simp,
+    symmetry, exact finset.card_ne_zero_of_mem this },
   push_cast, ring, norm_cast, omega,
 end
 
 lemma d_dvd_card_V 
   {G : fin_graph V} {d : ℕ} (hG : friendship G) (hd : regular_graph G d)
-  {p : ℕ} (hp : p ∣ d - 1) :
+  {p : ℕ} (hp : p ∣ d - 1) (d_pos : 0 < d) :
 (p:ℤ) ∣ fintype.card V - 1 :=
 begin
   rw friendship_reg_card' hG hd, ring,
   cases hp with k hk,
-  sorry
+  use d * k, norm_cast, rw hk, ring,
 end
 
 
 
 lemma le_one_of_pred_zero {n:ℕ}:
   n-1=0 → n ≤ 1:= by omega
-
--- local attribute [simp]
--- lemma nat.smul_one (d : ℕ) : d • (1 : ℤ) = (d : ℤ) := 
--- begin
---   induction d with k hk, simp,
---   rw nat.succ_eq_add_one, push_cast,
---   rw ← hk, rw add_smul, simp,
--- end
 
 
 local attribute [simp]
@@ -471,9 +460,9 @@ begin
     unfold regular_graph at hd, unfold degree at hd,
     rw hd },
 
-  { rw [← neighbor_iff_adjacent, h', finset.mem_erase],
-    split, { symmetry, exact hvw },
-    apply finset.mem_univ }
+  rw [← neighbor_iff_adjacent, h', finset.mem_erase],
+  split, { symmetry, exact hvw },
+  apply finset.mem_univ
 end
 
 lemma deg_le_two_friendship_has_pol 
@@ -517,13 +506,11 @@ begin
   unfold matrix_mod,
   apply matrix.ring_hom_apply.smul,
   have : fintype.card V ≠ 0 ,
-  {
-    intro h,
+  { intro h,
     rw fintype.card_eq_zero_iff at h,
-    apply h (arbitrary V),
-  },
+    apply h (arbitrary V)},
   have : ∃ k, fintype.card V = k + 1, 
-    {cases fintype.card V, tauto, use n}, 
+  { cases fintype.card V, tauto, use n }, 
   cases this with k hk, rw hk at *, 
   push_cast at hp, ring at hp, 
   norm_cast at hp, cases hp with d hd, rw hd,
@@ -547,20 +534,28 @@ begin
   rw friendship_reg_adj_sq G d dpos hG hd,
   rw ring_hom.map_add (matrix_mod V p) (matrix_J V) _,
   suffices key : (matrix_mod V p) ( ((d - 1):ℤ) • 1) = (matrix_mod V p) ( (0:ℤ) • 1), 
-    { simp only [key, add_right_eq_self],
-      ext, unfold matrix_mod, unfold matrix.ring_hom_apply, 
-      dsimp, 
-      unfold matrix.fun_apply, simp },
+  { simp only [key, add_right_eq_self],
+    ext, unfold matrix_mod, unfold matrix.ring_hom_apply, 
+    sorry },
   apply matrix.ring_hom_apply.smul,
   cases hp with k hk, rw hk, simp,
 end
 
+lemma friendship_reg_adj_mul_J
+  {G:fin_graph V} {d:ℕ} {dpos:0<d} (hG : friendship G) (hd : regular_graph G d)
+  :
+(adjacency_matrix G).mul (matrix_J V) = d • matrix_J V :=
+begin
+  ext, rw matrix.mul, dsimp, unfold matrix.dot_product, 
+  sorry
+
+end
 lemma friendship_reg_adj_mul_J_mod_p
   {G:fin_graph V} {d:ℕ} {dpos:0<d} (hG : friendship G) (hd : regular_graph G d)
   {p:ℕ} (hp : ↑p ∣ (d: ℤ ) - 1) :
 (matrix_mod V p (adjacency_matrix G)).mul (matrix_mod V p (matrix_J V)) = matrix_mod V p (matrix_J V):=
 begin
-  sorry,
+  sorry
 end
 
 lemma friendship_reg_adj_pow_mod_p
@@ -570,18 +565,14 @@ lemma friendship_reg_adj_pow_mod_p
 begin
   iterate 2 {cases k with k, { exfalso, linarith,},},
   induction k with k hind,
-  {
-    apply friendship_reg_adj_sq_mod_p hG hd hp,
-    exact dpos,
-  },
-  {
-    rw pow_succ,
+  { apply friendship_reg_adj_sq_mod_p hG hd hp,
+    exact dpos},
+  { rw pow_succ,
     have h2 : 2 ≤ k.succ.succ := by omega,
     have hind2 := hind h2,
     rw hind2,
     apply friendship_reg_adj_mul_J_mod_p hG hd hp,
-    exact dpos,
-  }
+    exact dpos }
 end
 
 lemma pow_p_eq_mod_p {p : ℕ} [fact p.prime] (a : zmod p):
@@ -589,25 +580,14 @@ a ^ p = a :=
 begin
   have htwo : 2 ≤ p := by {apply nat.prime.two_le, assumption},
   by_cases a = 0,
-  {
-    rw h,
-    apply zero_pow,
-    omega,
-  },
-  {
-    have neq : a ≠ 0 := by assumption,
+  { rw h, apply zero_pow, omega},
+  { have neq : a ≠ 0 := by assumption,
     transitivity a ^ (p - 1 + 1),
-    {
-      refine congr rfl _,
-      omega,
-    },
-    {
-      have hpow:= pow_succ a (p-1),
-      rw zmod.fermat_little p neq at hpow,
-      rw hpow,
-      rw mul_one,
-    }
-  }
+    { congr, omega },
+    have hpow:= pow_succ a (p-1),
+    rw zmod.fermat_little p neq at hpow,
+    rw hpow,
+    rw mul_one }
 end
 
 lemma tr_pow_p_mod_p
@@ -620,7 +600,6 @@ begin
   rw pow_p_eq_mod_p,
 end
 
----I've included [fact ((d-1).min_fac).prime] in the assumptions, because I don't know how to get tr_pow_p_mod_p to recognize the instances I make in the lemma
 lemma three_le_deg_friendship_contra 
   {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
 3 ≤ d → false :=
