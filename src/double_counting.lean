@@ -396,7 +396,7 @@ begin
 end
 
 lemma edges_union_of_eq_union_eq {A : finset α} {B1 B2 : finset β} {E : α→ β→ Prop} :
-  edges ⟨ A, (B1 ∪ B2) ,E⟩=edges ⟨ A, B1, E⟩ ∪ edges ⟨ A, B2, E⟩ :=
+  edges ⟨ A, B1 ∪ B2, E⟩=edges ⟨A, B1, E⟩ ∪ edges ⟨A, B2, E⟩ :=
 begin
   change finset.filter (function.uncurry E)(A.product (B1 ∪ B2)) = finset.filter (function.uncurry E)(A.product B1) ∪ finset.filter (function.uncurry E)(A.product B2),
   rw ← finset.filter_union,
@@ -408,13 +408,11 @@ begin
   tauto,
 end
 
-theorem card_edges_add_of_eq_disj_union_eq {A:finset α}{B1 B2:finset β}{E:α→ β→ Prop}:
-  disjoint B1 B2 →card_edges ⟨ A, (B1 ∪ B2) ,E⟩=card_edges ⟨ A, B1 ,E⟩ + card_edges ⟨ A, B2 ,E⟩:=
+theorem card_edges_add_of_eq_disj_union_eq {A : finset α} {B1 B2 : finset β} (h : disjoint B1 B2) (E : α → β → Prop) :
+card_edges ⟨A, B1 ∪ B2, E⟩ = card_edges ⟨A, B1, E⟩ + card_edges ⟨A, B2, E⟩ :=
 begin
-  intro disj,
   unfold card_edges,
   rw edges_union_of_eq_union_eq,
   apply finset.card_disjoint_union,
-  apply edges_disjoint_of_eq_disj_eq,
-  apply disj,
+  exact edges_disjoint_of_eq_disj_eq h,
 end
