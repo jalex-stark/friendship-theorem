@@ -620,7 +620,6 @@ begin
   rw pow_p_eq_mod_p,
 end
 
----I've included [fact ((d-1).min_fac).prime] in the assumptions, because I don't know how to get tr_pow_p_mod_p to recognize the instances I make in the lemma
 lemma three_le_deg_friendship_contra 
   {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
 3 ≤ d → false :=

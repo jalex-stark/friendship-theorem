@@ -11,6 +11,7 @@ import data.polynomial
 import ring_theory.polynomial
 import data.equiv.basic
 import data.zmod.basic
+import cayley_hamilton
 
 open polynomial
 
@@ -20,74 +21,87 @@ noncomputable theory
 variables {n : Type*} [fintype n] [inhabited n] [decidable_eq n] 
 variables {R : Type*} [comm_ring R] [nonzero R] --[decidable_eq R]
 
-def char_poly (M : matrix n n R) : polynomial R :=
-  matrix.det (λ (i j : n), (ite (i=j) X 0)-C(M i j))
-
-variable [integral_domain R]
-
 def poly_of_perm (M : matrix n n R) (σ : equiv.perm n) : polynomial R :=
   (σ.sign) * finset.univ.prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i)))
 
-lemma nat_degree_of_mat_val  (M : matrix n n R) (σ : equiv.perm n) (i j:n) :
-  ((ite (i=j) X 0)-C(M i j)).nat_degree = ite (i=j) 1 0 :=
+
+lemma nat_degree_of_mat_val (M : matrix n n R) (σ : equiv.perm n) (i j:n) :
+  ((ite (i=j) X 0)-C(M i j)).nat_degree = ite (i = j) 1 0 :=
 begin
   by_cases i=j,
   {
-  repeat {rw if_pos h},
-  have pos:1>0, omega,
-  change (X + (-C (M i j))).nat_degree = 1,
-  rw add_comm,
-  rw ← polynomial.C_neg,
-  rw ← polynomial.degree_eq_iff_nat_degree_eq_of_pos pos,
-  rw with_bot.coe_one,
-  transitivity X.degree,
-  {apply polynomial.degree_add_eq_of_degree_lt,
-  rw degree_X,
-  have leqzero:(C (-M i j)).degree≤ 0:= polynomial.degree_C_le,
-  rw le_iff_eq_or_lt at leqzero,
-  cases leqzero with eqzero ltzero,
-  --rw eqzero,
-  sorry,
-  sorry,
+    repeat {rw if_pos h},
+    have pos : 1 > 0 := by omega,
+    rw ← polynomial.degree_eq_iff_nat_degree_eq_of_pos pos,
+    apply  polynomial.degree_X_sub_C (M i j),
   },
-  simp,
-  },
-  repeat {rw if_neg h},
-  ring,
-  simp,
-end
-
-lemma nat_deg_prod_le_sum_nat_deg (f:n → polynomial R) (s:finset n) :
-(s.prod f).nat_degree ≤ s.sum (nat_degree ∘ f) :=
-begin
-  sorry,
-end
-
-variable [decidable_eq R]
-
-lemma deg_poly_of_perm (M : matrix n n R) (σ : equiv.perm n): 
-  (poly_of_perm M σ).nat_degree ≤ (finset.filter (λ x : n, σ x = x) finset.univ).card:=
-begin
-  unfold poly_of_perm,
-  have h1: (λ i:n, (ite (i= σ i) X 0) - C (M i (σ i)) )= λ i:n, ite (i= σ i) (X - C (M i (σ i))) (- C (M i (σ i))),
-  {sorry,},
-  rw h1,
-  rw finset.prod_ite (λ i:n, (X - C (M i (σ i)))) (λ i:n, (- C (M i (σ i)))),
-  by_cases (finset.filter (λ (x : n), ¬x = σ x) finset.univ).prod (λ (x : n), (λ (i : n), -C (M i (σ i))) x)=0,
   {
-    rw h,
-    repeat {rw ring.mul_zero},
+    repeat {rw if_neg h},
     simp,
-  },
-  {
-    sorry,
   }
 end
 
-lemma not_all_but_one_fixed_point (σ : equiv.perm n) :
-σ ≠ equiv.refl n → (finset.filter (λ (x : n), ¬x = σ x) finset.univ).card ≥ 2 :=
+
+variable [decidable_eq R]
+
+lemma gt_one_nonfixed_point_of_nonrefl {σ : equiv.perm n} :
+σ ≠ equiv.refl n → 1 < (finset.filter (λ (x : n), ¬ x = σ x) finset.univ).card :=
 begin
-  sorry
+  contrapose,
+  rw finset.one_lt_card_iff,
+  intro hyp,
+  push_neg,
+  ext,
+  simp,
+  by_cases σ x = x, exact h,
+  {exfalso, apply hyp,
+  existsi x,
+  existsi σ x,
+  split,
+  {rw finset.mem_filter,
+  split, apply finset.mem_univ,
+  {intro contra, apply h, symmetry, apply contra,},
+  },
+  {rw finset.mem_filter,
+  split, split,
+  {apply finset.mem_univ,},
+  {
+    intro contra, 
+    rw equiv.apply_eq_iff_eq σ x (σ x) at contra,
+    apply h, symmetry, apply contra,
+  },
+  {intro contra, apply h, symmetry, apply contra,},
+  },
+  },
+end
+
+lemma lt_card_sub_one_fixed_point_of_nonrefl {σ : equiv.perm n} :
+σ ≠ equiv.refl n → (finset.filter (λ (x : n), x = σ x) finset.univ).card < fintype.card n - 1:=
+begin
+  intro nonrefl,
+  have hcard := gt_one_nonfixed_point_of_nonrefl nonrefl,
+  have hun : (finset.filter (λ (x : n), x = σ x) finset.univ) ∪ (finset.filter (λ (x : n), ¬ x = σ x) finset.univ) = finset.univ :=  finset.filter_union_filter_neg_eq finset.univ,
+  have hin : (finset.filter (λ (x : n), x = σ x) finset.univ) ∩ (finset.filter (λ (x : n), ¬ x = σ x) finset.univ) = ∅ :=  finset.filter_inter_filter_neg_eq finset.univ,
+  rw ← finset.disjoint_iff_inter_eq_empty at hin,
+  rw fintype.card,
+  have h : ((finset.filter (λ (x : n), x = σ x) finset.univ) ∪ (finset.filter (λ (x : n), ¬ x = σ x) finset.univ)).card = (finset.filter (λ (x : n), x = σ x) finset.univ).card + (finset.filter (λ (x : n), ¬ x = σ x) finset.univ).card,
+  {rw finset.card_disjoint_union hin,},
+  rw hun at h,
+  rw h,
+  omega,
+end
+
+lemma poly_of_perm_factor_degree_card_fixed_points (M : matrix n n R) (σ : equiv.perm n) : 
+(finset.filter (λ (x : n), x = σ x) finset.univ).prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i))).degree = (finset.filter (λ (x : n), x = σ x) finset.univ).card:=
+begin
+
+end
+
+lemma poly_of_perm_in_low_deg_submodule (M : matrix n n R) (σ : equiv.perm n) : 
+  σ ≠ equiv.refl n → (poly_of_perm M σ) ∈ polynomial.degree_le R ↑((fintype.card n) - 2):=
+begin
+  intro nonrefl,
+  have hfixed := not_all_but_one_fixed_point nonrefl,
 end
 
 lemma sum_poly_of_non_refl_low_degree (M : matrix n n R) :
