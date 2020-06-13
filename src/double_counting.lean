@@ -1,4 +1,5 @@
 import data.fintype.basic data.finset data.prod algebra.big_operators
+import tactic
 
 open_locale classical
 noncomputable theory
@@ -30,7 +31,7 @@ def swap_inputs (E:α → β → Prop): β → α → Prop:=
   swap_inputs E b a=E a b:=
 begin
   unfold swap_inputs,
-  simp,
+  simp only [eq_iff_iff], 
   unfold function.uncurry,
   unfold function.curry,
   simp,
@@ -65,56 +66,38 @@ begin
   ext,
   unfold bigraph.swap,
   unfold bigraph.swap,
-  change swap_inputs (swap_inputs G.E) x x_1 ↔ G.E x x_1,
-  simp,
+  dsimp; simp,
 end
 
 def edges  (G:bigraph α β): finset (α × β):=
   finset.filter (uncurried G) (finset.product G.A G.B)
 
 @[simp] lemma mem_edges (G:bigraph α β){x:(α × β)}:
-  x ∈ edges G ↔ (x.fst ∈ G.A ∧ x.snd ∈ G.B) ∧ G.E x.fst x.snd:=
-begin
-  unfold edges,
-  simp,
-end
+  x ∈ edges G ↔ (x.fst ∈ G.A ∧ x.snd ∈ G.B) ∧ G.E x.fst x.snd := by { unfold edges, simp }
 
 def card_edges (G:bigraph α β): ℕ :=
   (edges G).card
 
-lemma mem_edges_swap (G:bigraph α β){x : β × α}:
-  x ∈ edges G.swap ↔ x.swap ∈ edges G:=
-begin
-  simp,
-  tauto,
-end
+lemma mem_edges_swap (G:bigraph α β) {x : β × α} :
+  x ∈ edges G.swap ↔ x.swap ∈ edges G := by {simp, tauto}
+
 
 lemma edges_swap (G:bigraph α β):
   edges G.swap = finset.image prod.swap (edges G):=
 begin
-  ext,
-  rw finset.mem_image,
-  rw mem_edges_swap,
-  split,
-  intro h1,
-  use a.swap,
-  use h1,
-  simp,
-  intro h,
-  cases h with a1 ha1,
-  cases ha1 with hha1 hswap,
-  rw ← hswap,
-  rw prod.swap_swap,
-  apply hha1,
+  ext, rw [finset.mem_image, mem_edges_swap],
+  split, 
+  { intro h1, use [a.swap, h1], simp },
+  rintro ⟨ _, _, h⟩, 
+  rw ← h, rwa prod.swap_swap,
 end
 
 lemma card_edges_symm (G:bigraph α β):
   card_edges (bigraph.swap G)=card_edges G:=
 begin
   change (edges (bigraph.swap G)).card=(edges G).card,
-  apply nat.le_antisymm,
-  rw edges_swap,
-  apply finset.card_image_le,
+  apply nat.le_antisymm, 
+  { rw edges_swap, apply finset.card_image_le },
   rw ← bigraph.swap_swap G,
   rw bigraph.swap_swap G.swap,
   rw edges_swap,
@@ -133,94 +116,76 @@ def left_fiber' (G:bigraph α β)(b: β): finset (α × β):=
 def right_fiber' (G:bigraph α β)(a:α): finset (α × β):=
   finset.image (λ b:β, (a,b)) (right_fiber G a)
 
-@[simp] lemma mem_left_fiber (G:bigraph α β){b: β}{x : α}:
-  x ∈ (left_fiber G b) ↔  x ∈ G.A ∧ G.E x b:=
+@[simp] lemma mem_left_fiber (G : bigraph α β) {b : β} {x : α}:
+x ∈ (left_fiber G b) ↔ x ∈ G.A ∧ G.E x b := by { unfold left_fiber, simp }
+
+
+@[simp] lemma mem_right_fiber (G : bigraph α β) {a : α} {x : β} :
+x ∈ (right_fiber G a) ↔ x ∈ G.B ∧ G.E a x := by { unfold right_fiber, simp }
+
+
+@[simp] lemma left_fiber_swap (G : bigraph α β) {a : α} :
+left_fiber G.swap a=right_fiber G a := by { ext, simp }
+
+
+@[simp] lemma right_fiber_swap (G : bigraph α β) {b : β} :
+right_fiber G.swap b = left_fiber G b := by { ext, simp }
+
+@[simp] lemma mem_left_fiber' (G : bigraph α β) {b : β} {x : α × β} :
+x ∈ (left_fiber' G b) ↔  (x.fst ∈ G.A ∧ x.snd = b) ∧ G.E x.fst x.snd:=
 begin
-  unfold left_fiber,
-  simp,
+  unfold left_fiber', tidy,
+  -- here's a human proof that runs a little faster than tidy:
+  -- simp only [exists_prop, mem_left_fiber, finset.mem_image],
+  -- split, 
+
+  -- simp only [and_imp, exists_imp_distrib],
+  -- intros h1 h2 h3 h4,
+  -- rw ← h4, tauto,
+
+  -- simp,
+  -- intros h1 h2 h3,
+  -- use x.fst,
+  -- rw ← h2, 
+  -- simp; tauto,
+end
+-- can the following be proven with swap and the above?
+@[simp] lemma mem_right_fiber' (G:bigraph α β) {a:α} {x : α × β} :
+x ∈ (right_fiber' G a) ↔ (x.fst = a ∧ x.snd ∈ G.B) ∧ G.E x.fst x.snd :=
+begin
+  unfold right_fiber', tidy,
+  -- here's a human proof that runs a little faster than tidy:
+
+  -- simp,
+  -- split,
+
+  -- simp,
+  -- intros b h2 h3 h4,
+  -- rw ← h4,
+  -- simp,
+  -- tauto,
+
+  -- simp,
+  -- intros h1 h2 h3,
+  -- use x.snd,
+  -- rw ← h1,
+  -- simp,
+  -- tauto,
 end
 
-@[simp] lemma mem_right_fiber (G:bigraph α β){a: α}{x : β}:
-  x ∈ (right_fiber G a) ↔  x ∈ G.B ∧ G.E a x:=
+@[simp] lemma left_fiber'_swap (G : bigraph α β) {a : α} :
+left_fiber' G.swap a = finset.image prod.swap (right_fiber' G a) :=
 begin
-  unfold right_fiber,
-  simp,
-end
-
-@[simp] lemma left_fiber_swap (G:bigraph α β){a:α}:
-  left_fiber G.swap a=right_fiber G a:=
-begin
-  ext,
-  simp,
-end
-
-@[simp] lemma right_fiber_swap (G:bigraph α β){b:β}:
-  right_fiber G.swap b = left_fiber G b:=
-begin
-  ext,
-  simp,
-end
-
-@[simp] lemma mem_left_fiber' (G:bigraph α β){b: β}{x : α × β}:
-  x ∈ (left_fiber' G b) ↔  (x.fst ∈ G.A ∧ x.snd = b) ∧ G.E x.fst x.snd:=
-begin
-  unfold left_fiber',
-  simp,
-  split,
-
-  simp,
-  intros h1 h2 h3 h4,
-  rw ← h4,
-  simp,
-  tauto,
-
-  simp,
-  intros h1 h2 h3,
-  use x.fst,
-  rw ← h2,
-  simp,
-  tauto,
-end
-
-@[simp] lemma mem_right_fiber' (G:bigraph α β){a:α}{x : α × β}:
-  x ∈ (right_fiber' G a) ↔  (x.fst =a ∧ x.snd ∈ G.B) ∧ G.E x.fst x.snd:=
-begin
-  unfold right_fiber',
-  simp,
-  split,
-
-  simp,
-  intros b h2 h3 h4,
-  rw ← h4,
-  simp,
-  tauto,
-
-  simp,
-  intros h1 h2 h3,
-  use x.snd,
-  rw ← h1,
-  simp,
-  tauto,
-end
-
-@[simp] lemma left_fiber'_swap (G:bigraph α β){a:α}:
-  left_fiber' G.swap a = finset.image prod.swap (right_fiber' G a):=
-begin
-  have h:right_fiber' G a = finset.image (λ b:β,(a,b)) (right_fiber G a),
-    refl,
-  rw h,
-  rw finset.image_image,
-  have h:left_fiber' G.swap a = finset.image (λ b:β,(b,a)) (left_fiber G.swap a),
-    refl,
-  rw h,
-  simp,
-  refl,
+  have h : right_fiber' G a = finset.image (λ b:β,(a,b)) (right_fiber G a) := by refl,
+  rw [h, finset.image_image],
+  have h2 : left_fiber' G.swap a = finset.image (λ b:β,(b,a)) (left_fiber G.swap a) := by refl,
+  simp [h2]; refl,
 end
 
 @[simp] lemma right_fiber'_swap (G:bigraph α β){b:β}:
   right_fiber' G.swap b = finset.image prod.swap (left_fiber' G b):=
 begin
-  have h:left_fiber' G b = finset.image (λ a:α,(a,b)) (left_fiber G b),
+  have h : left_fiber' G b = finset.image (λ a:α,(a,b)) (left_fiber G b),
     refl,
   rw h,
   rw finset.image_image,
@@ -305,7 +270,7 @@ begin
   apply disjoint_left_fiber' G neq,
 end
 
-theorem sum_right_fibers (G:bigraph α β):
+theorem sum_right_fibers (G : bigraph α β):
   card_edges G = G.A.sum(λ (a1:α), (right_fiber G a1).card):=
 begin
   transitivity G.A.sum(λ (a1:α), (left_fiber G.swap a1).card),
@@ -315,54 +280,49 @@ begin
   simp,
 end
 
-variable (G: bigraph α β)
+variable (G : bigraph α β)
 
-def left_regular (d:ℕ):Prop:=
-  ∀ (b:β), b∈ G.B→ (left_fiber G b).card = d
+def left_regular (d : ℕ) : Prop :=
+  ∀ (b : β), b ∈ G.B→ (left_fiber G b).card = d
 
 def right_regular (d:ℕ):Prop:=
-  ∀ (a:α), a ∈ G.A → (right_fiber G a).card = d
+  ∀ (a : α), a ∈ G.A → (right_fiber G a).card = d
 
-def left_unique:Prop:=
-  ∀ (b:β), b ∈ G.B→∃!(a:α), a ∈ G.A ∧ G.E a b
+def left_unique : Prop :=
+  ∀ (b : β), b ∈ G.B→∃!(a : α), a ∈ G.A ∧ G.E a b
 
-def right_unique:Prop:=
-  ∀ (a:α), a ∈ G.A→∃!(b:β), b ∈ G.B ∧ G.E a b
+def right_unique : Prop :=
+  ∀ (a : α), a ∈ G.A→∃!(b : β), b ∈ G.B ∧ G.E a b
 
-@[simp] lemma right_regular_swap{d:ℕ}:
-  right_regular G.swap d ↔ left_regular G d:=
+@[simp] lemma right_regular_swap (d  :ℕ) : right_regular G.swap d ↔ left_regular G d :=
 begin
   unfold left_regular,
   unfold right_regular,
   simp,
 end
 
-@[simp] lemma left_regular_swap{d:ℕ}:
-  left_regular G.swap d ↔ right_regular G d:=
+@[simp] lemma left_regular_swap {d : ℕ} : left_regular G.swap d ↔ right_regular G d :=
 begin
   unfold left_regular,
   unfold right_regular,
   simp,
 end
 
-@[simp] lemma right_unique_swap:
-  right_unique G.swap ↔ left_unique G:=
+@[simp] lemma right_unique_swap : right_unique G.swap ↔ left_unique G :=
 begin
   unfold left_unique,
   unfold right_unique,
   refl,
 end
 
-@[simp] lemma left_unique_swap:
-  left_unique G.swap ↔ right_unique G:=
+@[simp] lemma left_unique_swap : left_unique G.swap ↔ right_unique G :=
 begin
   unfold left_unique,
   unfold right_unique,
   refl,
 end
 
-@[simp] lemma left_unique_one_reg:
-  left_unique G ↔ left_regular G 1:=
+@[simp] lemma left_unique_one_reg : left_unique G ↔ left_regular G 1 :=
 begin
   transitivity ∀ b:β, b ∈ G.B → ∃!(a:α), a ∈ left_fiber G b,
   unfold left_unique,
@@ -376,90 +336,52 @@ begin
   rw finset.singleton_iff_unique_mem,
 end
 
-@[simp] lemma right_unique_one_reg:
-  right_unique G ↔ right_regular G 1:=
+@[simp] lemma right_unique_one_reg : right_unique G ↔ right_regular G 1 :=
 begin
   rw ← left_unique_swap,
   rw ← left_regular_swap,
   apply left_unique_one_reg,
 end
 
-theorem card_edges_of_lreg{l:ℕ}:
-  left_regular G l → card_edges G = l * G.B.card:=
-begin
-  intro lreg,
-  rw sum_left_fibers,
-  rw mul_comm l,
-  rw finset.sum_const_nat,
-  apply lreg,
-end
+theorem card_edges_of_lreg {l : ℕ} (hl : left_regular G l) : card_edges G = l * G.B.card:=
+by {rwa [sum_left_fibers, mul_comm l, finset.sum_const_nat]}
 
-theorem card_edges_of_lunique:
-  left_unique G → card_edges G = G.B.card:=
+theorem card_edges_of_lunique :
+  left_unique G → card_edges G = G.B.card :=
 begin
   rw left_unique_one_reg,
   intro h,
-  have h1:=card_edges_of_lreg G h,
+  have h1 := card_edges_of_lreg G h,
   simp at h1,
   apply h1,
 end
 
-theorem card_edges_of_rreg{r:ℕ}:
-  right_regular G r → card_edges G = r * G.A.card:=
-begin
-  intro rreg,
-  rw sum_right_fibers,
-  rw mul_comm r,
-  rw finset.sum_const_nat,
-  apply rreg,
-end
+theorem card_edges_of_rreg {r : ℕ} (hr : right_regular G r) : card_edges G = r * G.A.card :=
+by { rwa [sum_right_fibers, mul_comm r, finset.sum_const_nat] }
 
-theorem card_edges_of_runique:
-  right_unique G → card_edges G = G.A.card:=
+theorem card_edges_of_runique : right_unique G → card_edges G = G.A.card :=
 begin
   rw right_unique_one_reg,
   intro h,
-  have h1:=card_edges_of_rreg G h,
+  have h1 := card_edges_of_rreg G h,
   simp at h1,
   apply h1,
 end
 
-theorem double_count_of_lreg_rreg{l r:ℕ}:
-  left_regular G l ∧ right_regular G r → r*G.A.card = l * G.B.card:=
-begin
-  intro h,
-  cases h with lreg rreg,
-  transitivity card_edges G,
-  rw sum_right_fibers,
-  rw mul_comm r,
-  rw finset.sum_const_nat,
-  apply rreg,
-  rw sum_left_fibers,
-  rw mul_comm l,
-  rw finset.sum_const_nat,
-  apply lreg,
+theorem double_count_of_lreg_rreg {l r : ℕ} (hl : left_regular G l) (hr : right_regular G r) :
+r * G.A.card = l * G.B.card :=
+by { rwa [← card_edges_of_rreg _ hr, ← card_edges_of_lreg] }
+
+theorem card_eq_of_lunique_runique (hl : left_unique G) (hr : right_unique G ) :
+G.A.card = G.B.card :=
+begin 
+  simp only [right_unique_one_reg, left_unique_one_reg] at hl hr,
+  have h := double_count_of_lreg_rreg _ hl hr, 
+  revert h, simp,
 end
 
-theorem card_eq_of_lunique_runique:
-  left_unique G ∧ right_unique G → G.A.card = G.B.card:=
-begin
-  intro h,
-  cases h with lreg rreg,
-  transitivity card_edges G,
-  rw sum_right_fibers,
-  rw right_unique_one_reg at rreg,
-  rw ← mul_one G.A.card,
-  rw finset.sum_const_nat,
-  apply rreg,
-  rw sum_left_fibers,
-  rw left_unique_one_reg at lreg,
-  rw ← mul_one G.B.card,
-  rw finset.sum_const_nat,
-  apply lreg,
-end
-
-lemma edges_disjoint_of_eq_disj_eq {A:finset α}{B1 B2:finset β}{E:α→ β→ Prop}:
-  disjoint B1 B2 → disjoint (edges ⟨A, B1 ,E⟩) (edges ⟨ A, B2 ,E⟩):=
+lemma edges_disjoint_of_eq_disj_eq {A : finset α} {B1 B2 : finset β} {E : α → β → Prop} :
+  disjoint B1 B2 → disjoint (edges ⟨A, B1, E⟩) (edges ⟨A, B2, E⟩) :=
 begin
   intro disj,
   change disjoint (finset.filter (function.uncurry E)(A.product B1)) (finset.filter (function.uncurry E)(A.product B2)),
@@ -473,8 +395,8 @@ begin
   rw contra,
 end
 
-lemma edges_union_of_eq_union_eq {A:finset α}{B1 B2:finset β}{E:α→ β→ Prop}:
-  edges ⟨ A, (B1 ∪ B2) ,E⟩=edges ⟨ A, B1 ,E⟩ ∪ edges ⟨ A, B2 ,E⟩:=
+lemma edges_union_of_eq_union_eq {A : finset α} {B1 B2 : finset β} {E : α→ β→ Prop} :
+  edges ⟨ A, (B1 ∪ B2) ,E⟩=edges ⟨ A, B1, E⟩ ∪ edges ⟨ A, B2, E⟩ :=
 begin
   change finset.filter (function.uncurry E)(A.product (B1 ∪ B2)) = finset.filter (function.uncurry E)(A.product B1) ∪ finset.filter (function.uncurry E)(A.product B2),
   rw ← finset.filter_union,
