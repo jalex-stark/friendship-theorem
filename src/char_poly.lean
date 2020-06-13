@@ -17,11 +17,12 @@ open polynomial
 
 universe u
 
+open_locale big_operators
 open_locale classical
 noncomputable theory
 
 variables {n : Type u} [fintype n] [inhabited n] [decidable_eq n] 
-variables {R : Type u} [comm_ring R] [nonzero R] --[decidable_eq R]
+variables {R : Type u} [integral_domain R] [nonzero R] --[decidable_eq R]
 
 def poly_of_perm (M : matrix n n R) (σ : equiv.perm n) : polynomial R :=
   (σ.sign) * finset.univ.prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i)))
@@ -72,10 +73,10 @@ begin
 end
 
 lemma poly_of_perm_factor_degree_card_fixed_points (M : matrix n n R) (σ : equiv.perm n) : 
-degree ((finset.filter (λ (x : n), x = σ x) finset.univ).prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i))).degree = 
-  (finset.filter (λ (x : n), x = σ x) finset.univ).card:=
+((finset.filter (λ (x : n), x = σ x) finset.univ).prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i)))).degree 
+= (finset.filter (λ (x : n), x = σ x) finset.univ).card :=
 begin
-
+  
 end
 
 lemma poly_of_perm_in_low_deg_submodule (M : matrix n n R) (σ : equiv.perm n) : 
@@ -91,6 +92,23 @@ begin
   rw ← polynomial.mem_degree_le,
   -- show they're all in the submodule, then add with a lemma
   sorry
+end
+
+lemma degree_prod_eq_sum_degree (s : finset n) (f : n → polynomial R) (h : ∀ k ∈ s, f k ≠ 0) :
+nat_degree (∏ k in s, f k) = ∑ k in s, nat_degree (f k) :=
+begin
+  revert h, apply finset.induction_on s, { simp },
+  -- intros,
+  intros x s' hx hs' h, 
+  rw finset.prod_insert hx, 
+  rw nat_degree_mul_eq, swap, { apply h, simp }, 
+  swap,
+  { contrapose! h, rw finset.prod_eq_zero_iff at h,
+    rcases h with ⟨ k, hk, hk'⟩, use k, 
+    rw finset.mem_insert, tauto },
+  rw finset.sum_insert hx, 
+  simp only [add_right_inj], apply hs',
+  intros k hk, apply h, simp [hk], 
 end
 
 
@@ -122,7 +140,7 @@ begin
 end
 
 lemma degree_lt_of_degree_le_nat_lt {x: with_bot ℕ} {y z: ℕ} :
-y<z → x ≤ ↑y → x < ↑z:=sorry
+y<z → x ≤ ↑y → x < ↑z := sorry
 
 theorem deg_char_poly_eq_dim (M: matrix n n R) :
 (char_poly M).degree = fintype.card n := 
