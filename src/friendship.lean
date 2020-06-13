@@ -12,13 +12,8 @@ noncomputable theory
 lemma exists_unique_rewrite {X:Type*} {p: X → Prop} {q: X → Prop}:
   (∀ x:X, p x ↔ q x) → (∃!x : X, p x) → ∃!x:X, q x:= 
 begin
-  rw exists_unique_congr,
-  intros iff exun,
-  have h := exists_unique_congr iff,
-  rw ← h,
-  exact exun,
-  intro x,
-  refl,
+  intro h, rw exists_unique_congr h, 
+  tidy,
 end
 
 variables {V:Type*} [fintype V] [inhabited V]
@@ -33,9 +28,9 @@ def friendship (G : fin_graph V) : Prop :=
 @[simp] lemma friend_symm {G:fin_graph V} {v w x:V}:
   G.E v x ∧ G.E x w ↔ G.E v x ∧ G.E w x:=
 begin
-  split; try {intro a, cases a, split}; 
+  split; try { intro a, cases a, split }; 
   try {assumption}; 
-  {apply G.undirected, assumption},
+  { apply G.undirected, assumption },
 end
 
 def find_friend (G:fin_graph V)(friendG: friendship G)(v w:V)(vneqw:v ≠ w):V:=
@@ -91,11 +86,9 @@ end
 lemma friendship' {G : fin_graph V} (friendG : friendship G) {v w : V} (hvw : v ≠ w):
 exists_unique (is_friend G v w) :=
 begin
-  unfold exists_unique,
   use find_friend G friendG v w hvw,
-  split,
-  exact find_friend_spec G friendG v w hvw,
-  unfold is_friend,
+  split, exact find_friend_spec G friendG v w hvw,
+
   intros x hx,
   apply exists_unique.unique (friendG v w hvw) hx,
   exact find_friend_spec G friendG v w hvw,
@@ -134,8 +127,7 @@ begin
   intros b hb,
   have hsub : left_fiber (path_bigraph G (neighbors G v) B) b = (neighbors G v) ∩ (neighbors G b),
   apply left_fiber_eq_nbrs_inter_A hb,
-  rw hsub,
-  rw ← friends_eq_inter_neighbors,
+  rw [hsub, ← friends_eq_inter_neighbors],
   apply friends_size_one hG,
   intro veqb, rw veqb at hv,
   contradiction,
@@ -144,81 +136,60 @@ end
 lemma runique_paths {G:fin_graph V} {v : V} {A : finset V} (hG : friendship G) (hv : v ∉ A):
 right_unique (path_bigraph G A (neighbors G v)):=
 begin
-  rw [← path_bigraph_swap,right_unique_swap],
+  rw [← path_bigraph_swap, right_unique_swap],
   exact lunique_paths hG hv,
 end
 
-lemma counter_non_adj_deg_eq {G : fin_graph V} :
-  (friendship G ∧ no_pol G)→ ∀ v w :V, ¬ G.E v w → degree G v = degree G w:=
+lemma counter_non_adj_deg_eq 
+  {G : fin_graph V} (hG : friendship G)  (hG' : no_pol G) 
+  {v w : V} (hvw : ¬ G.E v w ): 
+degree G v = degree G w:=
 begin
-  intros hG v w hvw,
-  cases hG with fG npG,
-  by_cases v=w,
-  rw h,
+  by_cases v=w, { rw h },
   
   let b:= bigraph.mk (neighbors G v) (neighbors G w) (λ (x:V), λ (y:V), G.E x y),
 
   apply card_eq_of_lunique_runique b,
   split,
-  apply lunique_paths fG,
-  rw neighbor_iff_adjacent,
-  intro contra,
-  apply hvw,
-  apply G.undirected contra,
-
-  apply runique_paths fG,
+  { apply lunique_paths hG,
+    rw neighbor_iff_adjacent,
+    intro contra,
+    apply hvw,
+    apply G.undirected contra },
+  apply runique_paths hG,
   rw neighbor_iff_adjacent,
   apply hvw,
 end
 
-theorem counter_reg {G:fin_graph V} :
-  (friendship G ∧ no_pol G)→ ∃ d:ℕ, regular_graph G d :=
+
+
+theorem counter_reg {G:fin_graph V} (hG : friendship G) (hG' : no_pol G) :
+∃ d:ℕ, regular_graph G d :=
 begin
-  intro hG,
-  have friend := hG.left,
-  have np:=hG.right,
+  have np:=hG',
   have h2:=counter_non_adj_deg_eq hG,
-  have v:= _inst_2.default,
+  have v := arbitrary V,
   use degree G v,
   intro x,
-  by_cases G.E v x,
+  by_cases hvx : G.E v x,
+    swap, symmetry, apply counter_non_adj_deg_eq hG hG' hvx,
 
-  have hvx := h,
-  cases np v with w wworks,
-  cases np x with y yworks,
-  have degvw:=counter_non_adj_deg_eq hG v w wworks.right,
-  have degxy:=counter_non_adj_deg_eq hG x y yworks.right,
-  by_cases G.E x w,
-  have hxw:=h,
+  rcases hG' v with ⟨w, hvw', hvw⟩,
+  rcases hG' x with ⟨y, hxy', hxy⟩,
+  have degvw:=counter_non_adj_deg_eq hG hG' hvw,
+  have degxy:=counter_non_adj_deg_eq hG hG' hxy,
+  by_cases hxw : G.E x w, 
+    swap, {rw degvw, apply counter_non_adj_deg_eq hG hG' hxw},
   rw degxy,
-  by_cases G.E v y,
-  have hvy := h,
+  by_cases hvy : G.E v y,
+    swap, {symmetry, apply counter_non_adj_deg_eq hG hG' hvy},
   rw degvw,
-  apply counter_non_adj_deg_eq hG,
-  intro hcontra,
-  apply yworks.left,
-  unfold friendship at friend,
-  apply exists_unique.unique (friend v w wworks.left),
-  split,
-  exact hvx,
-  apply G.undirected hxw,
-  split,
-  exact hvy,
-  apply G.undirected hcontra,
-  
-  apply counter_non_adj_deg_eq hG,
-  intro hcontra,
-  apply h,
-  apply G.undirected hcontra,
-
-  rw degvw,
-  apply counter_non_adj_deg_eq hG,
-  apply h,
-  
-  apply counter_non_adj_deg_eq hG,
-  intro hcontra,
-  apply h,
-  apply G.undirected hcontra,
+  apply counter_non_adj_deg_eq hG hG',
+  intro hcontra, 
+  apply hxy',
+  apply exists_unique.unique (hG v w hvw'),
+  exact ⟨hvx, G.undirected hxw⟩,
+  exact ⟨hvy, G.undirected hcontra⟩,
 end
 
 
@@ -265,16 +236,13 @@ begin
   unfold right_regular,
   intros a ha,
   change a ∈ neighbors G v at ha,
-  rw right_fiber_eq_nbrs_inter_B,
+  rw right_fiber_eq_nbrs_inter_B ha,
   have h:neighbors G a∩ {v} = {v},
-  apply finset.inter_singleton_of_mem,
-  rw neighbor_iff_adjacent,
-  rw neighbor_iff_adjacent at ha,
-  apply G.undirected,
-  exact ha,
-  rw finset.inter_comm,
-  rw h,
-  simpa,
+  { apply finset.inter_singleton_of_mem,
+    rw neighbor_iff_adjacent,
+    rw neighbor_iff_adjacent at ha,
+    exact G.undirected ha },
+  rw [finset.inter_comm, h], simp,
 end
 
 lemma reg_card_count_3 
@@ -285,12 +253,12 @@ begin
   unfold degree at hd,
 
   transitivity d * (neighbors G v).card,
+  swap, { rw hd v },
   apply card_edges_of_rreg,
   intros a ha,
   rw right_fiber_eq_nbrs_inter_B,
   { rw [finset.univ_inter, hd a] },
   { exact ha },
-  rw hd v,
 end
 
 lemma finset.erase_disj_sing {α:Type*}{s:finset α}{a:α}:
@@ -655,13 +623,9 @@ begin
   rw ← exists_pol_of_not_no_pol,
   intro npG,
   have regG : ∃ (d:ℕ), regular_graph G d,
-  { apply counter_reg,
-  split; try {assumption} },
+  { apply counter_reg; assumption },
   cases regG with d dreg,
-  -- have hG:(friendship G∧ regular_graph G d),
-  -- split,
-  -- exact fG,
-  -- exact dreg,
+  
   have : d ≤ 2 ∨ 3 ≤ d := by omega, cases this,
   { have ex_pol : exists_politician G,
     apply deg_le_two_friendship_has_pol hG dreg,
