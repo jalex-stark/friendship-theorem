@@ -26,15 +26,12 @@ end
 @[simp] lemma neighbor_iff_adjacent  {V: Type*} [fintype V] (G: fin_graph V) (v w:V):
   w ∈ neighbors G v ↔ G.E v w:=
 begin
-  unfold neighbors,
-  simp,
-  split,
-  intro h,
-  exact h.right,
-  intro h,
-  split,
-  apply finset.mem_univ,
-  exact h,
+  unfold neighbors, 
+  simp only [finset.sep_def, finset.mem_filter],
+  split, { simp },
+  intro h, split, 
+  { apply finset.mem_univ },
+    exact h
 end
 
 def degree {V: Type*} [fintype V] (G: fin_graph V) (v: V):=
@@ -64,7 +61,6 @@ begin
   unfold matrix.transpose,
   have E:= G.E,
   unfold adjacency_matrix, norm_cast,
-  --simp,
   refine congr _ _, refl,
   refine propext _,
   split; apply G.undirected,
@@ -119,9 +115,6 @@ begin
   rw finset.inter_self,
   refl,
 end
-
--- def real_adjacency_matrix {V:Type*} [fintype V] (G: fin_graph V): matrix V V ℝ :=
-  -- matrix_compose (coe:ℕ → ℝ) (adjacency_matrix G)
 
 lemma reg_adj_mat_mul_vec_ones_is_degs {V:Type*} [fintype V] (G: fin_graph V)(d: ℕ):
   regular_graph G d → (adjacency_matrix G).mul_vec (λ i:V, 1)=(λ i:V,d):=

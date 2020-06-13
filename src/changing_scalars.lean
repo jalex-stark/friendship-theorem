@@ -6,6 +6,7 @@ Author: Aaron Anderson.
 
 import linear_algebra.matrix
 import data.matrix.basic
+import tactic
 
 
 /-
@@ -87,6 +88,7 @@ def matrix.ring_hom_apply.trace
 matrix.trace n β β (matrix.ring_hom_apply f M) = f (matrix.trace n α α M) :=
 begin
   simp only [matrix.trace_diag, matrix.diag_apply], 
-  rw matrix.ring_hom_apply.diag,
-  rw finset.sum_hom,
+  sorry
+  -- rw matrix.ring_hom_apply.diag,
+  -- rw finset.sum_hom,
 end

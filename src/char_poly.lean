@@ -21,48 +21,42 @@ variables {n : Type*} [fintype n] [inhabited n] [decidable_eq n]
 variables {R : Type*} [comm_ring R] [nonzero R] --[decidable_eq R]
 
 def char_poly (M : matrix n n R) : polynomial R :=
-  matrix.det (λ (i j : n), (ite (i=j) X 0)-C(M i j))
+  matrix.det (λ (i j : n), (ite (i=j) X 0)- C(M i j))
 
 variable [integral_domain R]
 
 def poly_of_perm (M : matrix n n R) (σ : equiv.perm n) : polynomial R :=
   (σ.sign) * finset.univ.prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i)))
+#check @nat_degree_mul_eq
+#check @degree_mul_le
+
+
+lemma nat_degree_mul_le {R : Type*} [comm_semiring R] (p q : polynomial R) :
+(p * q).nat_degree ≤ p.nat_degree + q.nat_degree :=
+begin
+  have := degree_mul_le p q,
+  sorry
+end
 
 lemma nat_degree_of_mat_val  (M : matrix n n R) (σ : equiv.perm n) (i j:n) :
   ((ite (i=j) X 0)-C(M i j)).nat_degree = ite (i=j) 1 0 :=
 begin
-  by_cases i=j,
-  {
-  repeat {rw if_pos h},
-  have pos:1>0, omega,
-  change (X + (-C (M i j))).nat_degree = 1,
-  rw add_comm,
-  rw ← polynomial.C_neg,
-  rw ← polynomial.degree_eq_iff_nat_degree_eq_of_pos pos,
-  rw with_bot.coe_one,
-  transitivity X.degree,
-  {apply polynomial.degree_add_eq_of_degree_lt,
-  rw degree_X,
-  have leqzero:(C (-M i j)).degree≤ 0:= polynomial.degree_C_le,
-  rw le_iff_eq_or_lt at leqzero,
-  cases leqzero with eqzero ltzero,
-  --rw eqzero,
-  sorry,
-  sorry,
-  },
-  simp,
-  },
-  repeat {rw if_neg h},
-  ring,
+  split_ifs,
+  { rw ← polynomial.degree_eq_iff_nat_degree_eq_of_pos (by omega),
+    simp },
   simp,
 end
-
+#check degree_mul_eq
 lemma nat_deg_prod_le_sum_nat_deg (f:n → polynomial R) (s:finset n) :
 (s.prod f).nat_degree ≤ s.sum (nat_degree ∘ f) :=
 begin
+  apply finset.induction_on s, { simp },
+  intros,
+  rw finset.prod_insert, swap, { assumption },
+
+  -- actually we still need that the product is a polynomial
   sorry,
 end
-
 variable [decidable_eq R]
 
 lemma deg_poly_of_perm (M : matrix n n R) (σ : equiv.perm n): 
