@@ -98,7 +98,6 @@ lemma degree_prod_eq_sum_degree (s : finset n) (f : n → polynomial R) (h : ∀
 nat_degree (∏ k in s, f k) = ∑ k in s, nat_degree (f k) :=
 begin
   revert h, apply finset.induction_on s, { simp },
-  -- intros,
   intros x s' hx hs' h, 
   rw finset.prod_insert hx, 
   rw nat_degree_mul_eq, swap, { apply h, simp }, 
@@ -190,14 +189,18 @@ begin
   sorry,
 end
 
-lemma poly_pow_p_char_p  {p : ℕ} [char_p R p] (f : polynomial R) :
+lemma poly_pow_p_char_p  (p : ℕ) [char_p R p] (f : polynomial R) :
 f ^ p = f.comp (polynomial.X ^ p) :=
 begin
   sorry
 end
 
-lemma char_poly_pow_p_char_p {p : ℕ} [char_p R p] (M : matrix n n R) :
+lemma char_poly_pow_p_char_p (p : ℕ) [char_p R p] (M : matrix n n R) :
 char_poly (M ^ p) = char_poly M :=
 begin
+  have := poly_pow_p_char_p p (char_poly M), 
+  unfold char_poly at *,
+  -- rw polynomial.eval_comp at this
+  -- apply poly_pow_p_char_p,
   sorry
 end
