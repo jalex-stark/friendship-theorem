@@ -49,50 +49,31 @@ end
 
 --variable [decidable_eq R]
 
-lemma gt_one_nonfixed_point_of_nonrefl {σ : equiv.perm n} :
-σ ≠ equiv.refl n → 1 < (finset.filter (λ (x : n), ¬ x = σ x) finset.univ).card :=
+lemma gt_one_nonfixed_point_of_nonrefl {σ : equiv.perm n} (h : σ ≠ equiv.refl n) : 
+1 < (finset.filter (λ (x : n), ¬ x = σ x) finset.univ).card :=
 begin
-  contrapose,
   rw finset.one_lt_card_iff,
-  intro hyp,
-  push_neg,
-  ext,
-  simp,
-  by_cases σ x = x, exact h,
-  { exfalso, apply hyp,
-    existsi x,
-    existsi σ x,
-    split,
-    {rw finset.mem_filter,
-      split, apply finset.mem_univ,
-    {intro contra, apply h, symmetry, apply contra, }, },
-  {rw finset.mem_filter,
-    split, split,
-    apply finset.mem_univ,
-    {intro contra, 
-      rw equiv.apply_eq_iff_eq σ x (σ x) at contra,
-      apply h, symmetry, apply contra },
-    {intro contra, apply h, symmetry, apply contra } } }
+  contrapose! h,
+  ext, dsimp,
+  have := h x (σ x), 
+  cases this, swap, cases this,
+  all_goals { symmetry, revert this, simp }
 end
 
-lemma lt_card_sub_one_fixed_point_of_nonrefl {σ : equiv.perm n} :
-σ ≠ equiv.refl n → (finset.filter (λ (x : n), x = σ x) finset.univ).card < fintype.card n - 1:=
+lemma lt_card_sub_one_fixed_point_of_nonrefl {σ : equiv.perm n} (h : σ ≠ equiv.refl n) :
+(finset.filter (λ (x : n), x = σ x) finset.univ).card < fintype.card n - 1:=
 begin
-  intro nonrefl,
-  have hcard := gt_one_nonfixed_point_of_nonrefl nonrefl,
-  have hun : (finset.filter (λ (x : n), x = σ x) finset.univ) ∪ (finset.filter (λ (x : n), ¬ x = σ x) finset.univ) = finset.univ :=  finset.filter_union_filter_neg_eq finset.univ,
+  have hun := @finset.filter_union_filter_neg_eq _ (λ (x : n), x = σ x) _ _ _ finset.univ,
   have hin : (finset.filter (λ (x : n), x = σ x) finset.univ) ∩ (finset.filter (λ (x : n), ¬ x = σ x) finset.univ) = ∅ :=  finset.filter_inter_filter_neg_eq finset.univ,
   rw ← finset.disjoint_iff_inter_eq_empty at hin,
-  rw fintype.card,
-  have h : ((finset.filter (λ (x : n), x = σ x) finset.univ) ∪ (finset.filter (λ (x : n), ¬ x = σ x) finset.univ)).card = (finset.filter (λ (x : n), x = σ x) finset.univ).card + (finset.filter (λ (x : n), ¬ x = σ x) finset.univ).card,
-  {rw finset.card_disjoint_union hin,},
-  rw hun at h,
-  rw h,
-  omega,
+  rw fintype.card, conv_rhs { rw ← hun }, 
+  rw finset.card_disjoint_union hin, 
+  have := gt_one_nonfixed_point_of_nonrefl h, omega,
 end
 
 lemma poly_of_perm_factor_degree_card_fixed_points (M : matrix n n R) (σ : equiv.perm n) : 
-(finset.filter (λ (x : n), x = σ x) finset.univ).prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i))).degree = (finset.filter (λ (x : n), x = σ x) finset.univ).card:=
+degree ((finset.filter (λ (x : n), x = σ x) finset.univ).prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i))).degree = 
+  (finset.filter (λ (x : n), x = σ x) finset.univ).card:=
 begin
 
 end
@@ -128,10 +109,7 @@ end
 lemma poly_of_refl_degree_eq_dim (M: matrix n n R) :
 (poly_of_perm M (equiv.refl n)).degree = ↑(fintype.card n) :=
 begin
-  have pos:fintype.card n > 0,
-  {simp only [gt_iff_lt],
-  rw fintype.card_pos_iff,
-  simp,},
+  have pos : fintype.card n > 0, { simp [fintype.card_pos_iff] },
   rw polynomial.degree_eq_iff_nat_degree_eq_of_pos pos,
   apply poly_of_refl_nat_degree_eq_dim,
 end
