@@ -15,11 +15,13 @@ import cayley_hamilton
 
 open polynomial
 
+universe u
+
 open_locale classical
 noncomputable theory
 
-variables {n : Type*} [fintype n] [inhabited n] [decidable_eq n] 
-variables {R : Type*} [comm_ring R] [nonzero R] --[decidable_eq R]
+variables {n : Type u} [fintype n] [inhabited n] [decidable_eq n] 
+variables {R : Type u} [comm_ring R] [nonzero R] --[decidable_eq R]
 
 def poly_of_perm (M : matrix n n R) (σ : equiv.perm n) : polynomial R :=
   (σ.sign) * finset.univ.prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i)))
@@ -27,7 +29,7 @@ def poly_of_perm (M : matrix n n R) (σ : equiv.perm n) : polynomial R :=
 #check @degree_mul_le
 
 
-lemma nat_degree_mul_le {R : Type*} [comm_semiring R] (p q : polynomial R) :
+lemma nat_degree_mul_le {R : Type u} [comm_semiring R] (p q : polynomial R) :
 (p * q).nat_degree ≤ p.nat_degree + q.nat_degree :=
 begin
   have := degree_mul_le p q,
@@ -57,25 +59,20 @@ begin
   ext,
   simp,
   by_cases σ x = x, exact h,
-  {exfalso, apply hyp,
-  existsi x,
-  existsi σ x,
-  split,
+  { exfalso, apply hyp,
+    existsi x,
+    existsi σ x,
+    split,
+    {rw finset.mem_filter,
+      split, apply finset.mem_univ,
+    {intro contra, apply h, symmetry, apply contra, }, },
   {rw finset.mem_filter,
-  split, apply finset.mem_univ,
-  {intro contra, apply h, symmetry, apply contra,},
-  },
-  {rw finset.mem_filter,
-  split, split,
-  {apply finset.mem_univ,},
-  {
-    intro contra, 
-    rw equiv.apply_eq_iff_eq σ x (σ x) at contra,
-    apply h, symmetry, apply contra,
-  },
-  {intro contra, apply h, symmetry, apply contra,},
-  },
-  },
+    split, split,
+    apply finset.mem_univ,
+    {intro contra, 
+      rw equiv.apply_eq_iff_eq σ x (σ x) at contra,
+      apply h, symmetry, apply contra },
+    {intro contra, apply h, symmetry, apply contra } } }
 end
 
 lemma lt_card_sub_one_fixed_point_of_nonrefl {σ : equiv.perm n} :
@@ -101,19 +98,20 @@ begin
 end
 
 lemma poly_of_perm_in_low_deg_submodule (M : matrix n n R) (σ : equiv.perm n) : 
-  σ ≠ equiv.refl n → (poly_of_perm M σ) ∈ polynomial.degree_le R ↑((fintype.card n) - 2):=
+  σ ≠ equiv.refl n → (poly_of_perm M σ) ∈ polynomial.degree_lt R ↑((fintype.card n) - 1):=
 begin
   intro nonrefl,
   have hfixed := not_all_but_one_fixed_point nonrefl,
 end
 
 lemma sum_poly_of_non_refl_low_degree (M : matrix n n R) :
-  ((finset.univ.erase (equiv.refl n)).sum (poly_of_perm M)).degree ≤ ↑((fintype.card n) - 2):=
+  ((finset.univ.erase (equiv.refl n)).sum (poly_of_perm M)).degree < ↑((fintype.card n) - 1):=
 begin
   rw ← polynomial.mem_degree_le,
   -- show they're all in the submodule, then add with a lemma
   sorry
 end
+
 
 lemma char_poly_eq_poly_of_refl_plus_others (M: matrix n n R):
 char_poly M = (finset.univ.erase (equiv.refl n)).sum (poly_of_perm M)+poly_of_perm M (equiv.refl n):=
@@ -191,6 +189,8 @@ theorem det_from_char_poly (M: matrix n n R) :
 M.det = (-1)^(fintype.card n) * (char_poly M).coeff 0:= 
 begin
   rw polynomial.coeff_zero_eq_eval_zero,
+  rw eval,
+  --rw eval₂_
   sorry,
 end
 
