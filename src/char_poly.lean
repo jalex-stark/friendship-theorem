@@ -15,7 +15,7 @@ import cayley_hamilton
 
 open polynomial
 
---open_locale classical
+open_locale classical
 noncomputable theory
 
 variables {n : Type*} [fintype n] [inhabited n] [decidable_eq n] 
@@ -23,26 +23,29 @@ variables {R : Type*} [comm_ring R] [nonzero R] --[decidable_eq R]
 
 def poly_of_perm (M : matrix n n R) (σ : equiv.perm n) : polynomial R :=
   (σ.sign) * finset.univ.prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i)))
+#check @nat_degree_mul_eq
+#check @degree_mul_le
+
+
+lemma nat_degree_mul_le {R : Type*} [comm_semiring R] (p q : polynomial R) :
+(p * q).nat_degree ≤ p.nat_degree + q.nat_degree :=
+begin
+  have := degree_mul_le p q,
+  sorry
+end
 
 
 lemma nat_degree_of_mat_val (M : matrix n n R) (σ : equiv.perm n) (i j:n) :
   ((ite (i=j) X 0)-C(M i j)).nat_degree = ite (i = j) 1 0 :=
 begin
-  by_cases i=j,
-  {
-    repeat {rw if_pos h},
-    have pos : 1 > 0 := by omega,
-    rw ← polynomial.degree_eq_iff_nat_degree_eq_of_pos pos,
-    apply  polynomial.degree_X_sub_C (M i j),
-  },
-  {
-    repeat {rw if_neg h},
-    simp,
-  }
+  split_ifs,
+  { rw ← polynomial.degree_eq_iff_nat_degree_eq_of_pos (by omega),
+    simp },
+  simp,
 end
 
 
-variable [decidable_eq R]
+--variable [decidable_eq R]
 
 lemma gt_one_nonfixed_point_of_nonrefl {σ : equiv.perm n} :
 σ ≠ equiv.refl n → 1 < (finset.filter (λ (x : n), ¬ x = σ x) finset.univ).card :=
