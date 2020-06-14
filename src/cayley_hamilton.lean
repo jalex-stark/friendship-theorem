@@ -26,12 +26,12 @@ universe u
 
 noncomputable theory
 
-variables {n : Type u} [fintype n] [decidable_eq n] [inhabited n] {R : Type u} [ring R]
+variables {n : Type u} [fintype n] [decidable_eq n] [inhabited n] {R : Type u}
 
 section general_matrix_ops
 
 
-variables (n) (R)
+variables (n) (R) [ring R]
 def scalar_matrix (x : R) : matrix n n R := x • 1
 
 lemma scalar_matrix_def (x : R) : 
@@ -285,39 +285,11 @@ begin
   }
 end
 
-lemma scalar_matrix_mul_eq_smul (x:R) {M: matrix n n R} :
-(scalar_matrix n R x).mul M = x • M :=
-begin
-  rw scalar_matrix_diagonal,
-  ext,
-  simp,
-end
-
-lemma scalar_matrix_mul_vec_eq_smul (x:R) {vec: n → R} :
-(scalar_matrix n R x).mul_vec vec = x • vec :=
-begin
-  rw scalar_matrix_diagonal,
-  ext,
-  rw matrix.mul_vec_diagonal,
-  simp,
-end
-
-
-def matrix.mul_vec.add_monoid_hom_left (vec: n → R) : (matrix n n R) →+ (n → R) :=
-begin
-  refine add_monoid_hom.mk (λ M : matrix n n R, M.mul_vec vec) _ _,
-  sorry,
-  sorry,
-end
-
-lemma matrix.mul_vec.add_monoid_hom_left_to_fun (vec: n → R) {M: matrix n n R} : 
-add_monoid_hom.to_fun (matrix.mul_vec.add_monoid_hom_left vec) M = M.mul_vec vec := rfl
-
-
-
 end general_matrix_ops
 
 variables {n} {R} [comm_ring R]
+
+section cayley_hamilton
 
 def m_C : matrix n n R → matrix n n (polynomial R) :=
   matrix.fun_apply C
@@ -443,3 +415,5 @@ begin
   rw hzero,
   simp,
 end
+
+end cayley_hamilton

@@ -72,27 +72,6 @@ begin
   have := gt_one_nonfixed_point_of_nonrefl h, omega,
 end
 
-lemma poly_of_perm_factor_degree_card_fixed_points (M : matrix n n R) (σ : equiv.perm n) : 
-((finset.filter (λ (x : n), x = σ x) finset.univ).prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i)))).degree 
-= (finset.filter (λ (x : n), x = σ x) finset.univ).card :=
-begin
-  
-end
-
-lemma poly_of_perm_in_low_deg_submodule (M : matrix n n R) (σ : equiv.perm n) : 
-  σ ≠ equiv.refl n → (poly_of_perm M σ) ∈ polynomial.degree_lt R ↑((fintype.card n) - 1):=
-begin
-  intro nonrefl,
-  have hfixed := not_all_but_one_fixed_point nonrefl,
-end
-
-lemma sum_poly_of_non_refl_low_degree (M : matrix n n R) :
-  ((finset.univ.erase (equiv.refl n)).sum (poly_of_perm M)).degree < ↑((fintype.card n) - 1):=
-begin
-  rw ← polynomial.mem_degree_le,
-  -- show they're all in the submodule, then add with a lemma
-  sorry
-end
 
 lemma degree_prod_eq_sum_degree (s : finset n) (f : n → polynomial R) (h : ∀ k ∈ s, f k ≠ 0) :
 nat_degree (∏ k in s, f k) = ∑ k in s, nat_degree (f k) :=
@@ -109,6 +88,47 @@ begin
   simp only [add_right_inj], apply hs',
   intros k hk, apply h, simp [hk], 
 end
+
+lemma poly_of_perm_factor_degree_card_fixed_points (M : matrix n n R) (σ : equiv.perm n) : 
+((finset.filter (λ (x : n), x = σ x) finset.univ).prod (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i)))).nat_degree 
+= (finset.filter (λ (x : n), x = σ x) finset.univ).card :=
+begin
+  have nonzero : (∀ (k : n),
+     k ∈ finset.filter (λ (x : n), x = σ x) finset.univ →
+     (λ (i : n), ite (i = σ i) X 0 - C (M i (σ i))) k ≠ 0),
+  { intros k hk, dsimp,
+    rw finset.mem_filter at hk, rw if_pos hk.right,
+    intro contra, 
+    have h := polynomial.degree_X_sub_C (M k (σ k)), 
+    rw contra at h, simp at h, tauto, },
+  have h := degree_prod_eq_sum_degree (finset.filter (λ (x : n), x = σ x) finset.univ)
+    (λ (i : n), (ite (i= σ i) X 0) - C (M i (σ i))) nonzero,
+  rw h,
+  rw ← mul_one (finset.filter (λ (x : n), x = σ x) finset.univ).card,
+  apply finset.sum_const_nat,
+  intros x hx,
+  rw nat_degree_of_mat_val M σ,
+  rw finset.mem_filter at hx,
+  rw if_pos hx.right,
+end
+
+lemma poly_of_perm_in_low_deg_submodule (M : matrix n n R) (σ : equiv.perm n) : 
+  σ ≠ equiv.refl n → (poly_of_perm M σ) ∈ polynomial.degree_lt R ↑((fintype.card n) - 1):=
+begin
+  intro nonrefl,
+  have hfixed := lt_card_sub_one_fixed_point_of_nonrefl nonrefl,
+  rw poly_of_perm,
+  rw finset.prod_apply_ite,
+end
+
+lemma sum_poly_of_non_refl_low_degree (M : matrix n n R) :
+  ((finset.univ.erase (equiv.refl n)).sum (poly_of_perm M)).degree < ↑((fintype.card n) - 1):=
+begin
+  rw ← polynomial.mem_degree_le,
+  -- show they're all in the submodule, then add with a lemma
+  sorry
+end
+
 
 
 lemma char_poly_eq_poly_of_refl_plus_others (M: matrix n n R):
@@ -189,18 +209,95 @@ begin
   sorry,
 end
 
-lemma poly_pow_p_char_p  (p : ℕ) [char_p R p] (f : polynomial R) :
+section char_p
+
+instance polynomial_char_p (p : ℕ) [char_p R p] : char_p (polynomial R) p :=
+{ cast_eq_zero_iff :=
+  begin
+    intro k,
+    have := _inst_6.cast_eq_zero_iff, have hk := this k, clear this,
+    rw ← hk,
+    rw polynomial.nat_cast_eq_C k,
+    rw ← polynomial.C_0,
+    rw polynomial.C_inj,
+  end }
+
+instance matrix_char_p (p : ℕ) [char_p R p] : char_p (matrix n n R) p :=
+{ cast_eq_zero_iff :=
+  begin
+    intro k,
+    have := _inst_6.cast_eq_zero_iff, have hk := this k, clear this,
+    rw ← hk,
+    sorry,
+  end }
+
+lemma poly_pow_p_char_p  (p : ℕ) [fact p.prime] [char_p R p] (f : polynomial R) :
 f ^ p = f.comp (polynomial.X ^ p) :=
 begin
   sorry
 end
 
-lemma char_poly_pow_p_char_p (p : ℕ) [char_p R p] (M : matrix n n R) :
-char_poly (M ^ p) = char_poly M :=
+lemma pow_commutes_with_det (k : ℕ) (M : matrix n n R) :
+(M ^ k).det = (M.det) ^ k :=
 begin
-  have := poly_pow_p_char_p p (char_poly M), 
-  unfold char_poly at *,
-  -- rw polynomial.eval_comp at this
-  -- apply poly_pow_p_char_p,
+  induction k with k hk, simp,
+  repeat {rw pow_succ}, rw ← hk, simp,
+end
+
+lemma pow_commutes_with_m_C (k : ℕ) (M : matrix n n R) :
+m_C (M ^ k) = (m_C M) ^ k :=
+begin
+  unfold m_C,
+  change matrix.ring_hom_apply (ring_hom.of C) (M ^ k) = matrix.ring_hom_apply (ring_hom.of C) M ^ k,
+  induction k with k hk, simp, simp
+end
+
+theorem add_pow_char_comm_elts (α : Type u) [ring α] {p : ℕ} [fact p.prime]
+  [char_p α p] (x y : α) : 
+  commute x y → (x + y)^p = x^p + y^p :=
+begin
+  intro comm,
+  rw [commute.add_pow comm, finset.sum_range_succ, nat.sub_self, pow_zero, nat.choose_self],
+  rw [nat.cast_one, mul_one, mul_one, add_right_inj],
+  transitivity,
+  { refine finset.sum_eq_single 0 _ _,
+    { intros b h1 h2,
+      have := nat.prime.dvd_choose_self (nat.pos_of_ne_zero h2) (finset.mem_range.1 h1) hp,
+      rw [← nat.div_mul_cancel this, nat.cast_mul, char_p.cast_eq_zero α p],
+      simp only [mul_zero] },
+    { intro H, exfalso, apply H, exact finset.mem_range.2 hp.pos } },
+  rw [pow_zero, nat.sub_zero, one_mul, nat.choose_zero_right, nat.cast_one, mul_one]
+end
+
+lemma comp_commutes_with_det (p : polynomial R) (M : matrix n n (polynomial R)) :
+(matrix.fun_apply (λ q : polynomial R, q.comp p) M).det = (M.det).comp p :=
+begin
   sorry
 end
+
+lemma char_poly_pow_p_char_p (p : ℕ) [fact p.prime] [char_p R p] (M : matrix n n R) :
+char_poly (M ^ p) = char_poly M :=
+begin
+  have := poly_pow_p_char_p p (char_poly M),
+  unfold char_poly at *,
+  apply frobenius_inj (polynomial R) p,
+  repeat {rw frobenius_def},
+  rw poly_pow_p_char_p,
+  rw ← pow_commutes_with_det,
+  repeat {rw sub_eq_add_neg},
+  rw add_pow_char_comm_elts, swap,
+  { rw commute, rw semiconj_by, simp, },
+  rw pow_commutes_with_m_C,
+  rw ← comp_commutes_with_det,
+  refine congr rfl _,
+  ext,
+  refine congr (congr rfl _) rfl,
+  rw matrix.fun_apply,
+  simp only [add_comp, X_comp, matrix.neg_val, mul_comp, matrix.add_val, matrix.smul_val, m_C, matrix.one_val],
+  
+  -- rw polynomial.eval_comp at this
+  -- apply poly_pow_p_char_p,
+  sorry,
+end
+
+end char_p
