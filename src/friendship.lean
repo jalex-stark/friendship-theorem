@@ -16,7 +16,7 @@ begin
   tidy,
 end
 
-variables {V:Type*} [fintype V] [inhabited V]
+variables {V:Type} [fintype V] [inhabited V]
 
 
 def is_friend (G : fin_graph V) (v w : V) (u : V) : Prop :=
@@ -150,7 +150,6 @@ begin
   let b:= bigraph.mk (neighbors G v) (neighbors G w) (λ (x:V), λ (y:V), G.E x y),
 
   apply card_eq_of_lunique_runique b,
-  split,
   { apply lunique_paths hG,
     rw neighbor_iff_adjacent,
     intro contra,
@@ -558,15 +557,10 @@ begin
     rw mul_one }
 end
 
-lemma tr_pow_p_mod_p
-  {p:ℕ} [fact p.prime] (M:matrix V V (zmod p)) (hp : ↑p ∣ (fintype.card V : ℤ ) - 1) :
+lemma tr_pow_p_mod_p {p:ℕ} [fact p.prime] (M : matrix V V (zmod p)) :
 matrix.trace V (zmod p) (zmod p) (M ^ p) = (matrix.trace V (zmod p)(zmod p) M)^p :=
-begin
-  rw trace_from_char_poly M,
-  rw trace_from_char_poly (M^p),
-  rw char_poly_pow_p_char_p,
-  rw pow_p_eq_mod_p,
-end
+by rw [trace_from_char_poly, trace_from_char_poly, char_poly_pow_p_char_p, pow_p_eq_mod_p]
+
 
 lemma three_le_deg_friendship_contra 
   {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
@@ -584,7 +578,8 @@ begin
   { transitivity ↑(d-1), {rwa int.coe_nat_dvd},
     use d, rw [d_cast, cardV], ring },
   have neq1 : d-1 ≠ 1 := by linarith,
-  have pprime : p.prime := nat.min_fac_prime neq1,
+  haveI pprime : p.prime := nat.min_fac_prime neq1,
+  have trace_0:= tr_pow_p_mod_p (matrix_mod V p (adjacency_matrix G)),
   have trace_0:= @tr_pow_p_mod_p  V _ _ _ pprime (matrix_mod V p (adjacency_matrix G)) (p_dvd_V_pred),
   have := trace_mod p (adjacency_matrix G), rw traceless at this, rw this at trace_0, clear this,
   have eq_J : (matrix_mod V p (adjacency_matrix G)) ^ p = matrix_mod V p (matrix_J V),
