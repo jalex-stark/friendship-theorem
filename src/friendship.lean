@@ -561,7 +561,6 @@ lemma tr_pow_p_mod_p {p:ℕ} [fact p.prime] (M : matrix V V (zmod p)) :
 matrix.trace V (zmod p) (zmod p) (M ^ p) = (matrix.trace V (zmod p)(zmod p) M)^p :=
 by rw [trace_from_char_poly, trace_from_char_poly, char_poly_pow_p_char_p, pow_p_eq_mod_p]
 
-
 lemma three_le_deg_friendship_contra 
   {G:fin_graph V} {d:ℕ} (hG : friendship G) (hd : regular_graph G d) :
 3 ≤ d → false :=
@@ -578,9 +577,9 @@ begin
   { transitivity ↑(d-1), {rwa int.coe_nat_dvd},
     use d, rw [d_cast, cardV], ring },
   have neq1 : d-1 ≠ 1 := by linarith,
-  haveI pprime : p.prime := nat.min_fac_prime neq1,
+  have pprime : p.prime := nat.min_fac_prime neq1,
+  haveI : fact p.prime := pprime,
   have trace_0:= tr_pow_p_mod_p (matrix_mod V p (adjacency_matrix G)),
-  have trace_0:= @tr_pow_p_mod_p  V _ _ _ pprime (matrix_mod V p (adjacency_matrix G)) (p_dvd_V_pred),
   have := trace_mod p (adjacency_matrix G), rw traceless at this, rw this at trace_0, clear this,
   have eq_J : (matrix_mod V p (adjacency_matrix G)) ^ p = matrix_mod V p (matrix_J V),
   {
@@ -588,7 +587,7 @@ begin
     { rw ← d_cast,
       rw int.coe_nat_dvd,
       apply p_dvd_d_pred},
-    { apply nat.prime.two_le pprime},
+    { apply nat.prime.two_le pprime },
     assumption,
   },
   contrapose! trace_0, clear trace_0,
