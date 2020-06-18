@@ -503,7 +503,7 @@ begin
   suffices key : (matrix_mod V p) ( ((d - 1):ℤ) • 1) = (matrix_mod V p) ( (0:ℤ) • 1), 
   { simp only [key, add_right_eq_self],
     ext, unfold matrix_mod, unfold matrix.ring_hom_apply, 
-    sorry },
+    dsimp, unfold matrix.fun_apply, simp },
   apply matrix.ring_hom_apply.smul,
   cases hp with k hk, rw hk, simp,
 end
@@ -511,18 +511,31 @@ end
 lemma friendship_reg_adj_mul_J
   {G:fin_graph V} {d:ℕ} {dpos:0<d} (hG : friendship G) (hd : regular_graph G d)
   :
-(adjacency_matrix G).mul (matrix_J V) = d • matrix_J V :=
+(adjacency_matrix G).mul (matrix_J V) = (d : ℤ) • matrix_J V :=
 begin
   ext, rw matrix.mul, dsimp, unfold matrix.dot_product, 
-  sorry
-
+  rw matrix_J, dsimp, 
+  simp only [mul_one, nat.smul_one, int.nat_cast_eq_coe_nat],
+  have : adjacency_matrix G i = get_row (adjacency_matrix G) i, refl,
+  rw [this, adjacency_matrix_row_ind],
+  simp; apply hd
 end
+
 lemma friendship_reg_adj_mul_J_mod_p
   {G:fin_graph V} {d:ℕ} {dpos:0<d} (hG : friendship G) (hd : regular_graph G d)
   {p:ℕ} (hp : ↑p ∣ (d: ℤ ) - 1) :
 (matrix_mod V p (adjacency_matrix G)).mul (matrix_mod V p (matrix_J V)) = matrix_mod V p (matrix_J V):=
 begin
-  sorry
+  rw ← matrix.mul_eq_mul,
+  rw ← ring_hom.map_mul,
+  rw matrix.mul_eq_mul,
+  rw friendship_reg_adj_mul_J hG hd, swap, { exact dpos },
+  have : matrix_J V = (1:ℤ) • (matrix_J V), 
+  { ext, rw matrix_J, simp },
+  conv_rhs { rw this }, 
+  apply matrix.ring_hom_apply.smul, 
+  cases hp with k hk, rw sub_eq_iff_eq_add at hk, 
+  rw hk, simp,
 end
 
 lemma friendship_reg_adj_pow_mod_p
@@ -582,14 +595,11 @@ begin
   have trace_0:= tr_pow_p_mod_p (matrix_mod V p (adjacency_matrix G)),
   have := trace_mod p (adjacency_matrix G), rw traceless at this, rw this at trace_0, clear this,
   have eq_J : (matrix_mod V p (adjacency_matrix G)) ^ p = matrix_mod V p (matrix_J V),
-  {
-    apply friendship_reg_adj_pow_mod_p hG hd,
-    { rw ← d_cast,
-      rw int.coe_nat_dvd,
-      apply p_dvd_d_pred},
+  { apply friendship_reg_adj_pow_mod_p hG hd,
+    { rw [← d_cast, int.coe_nat_dvd],
+      apply p_dvd_d_pred },
     { apply nat.prime.two_le pprime },
-    assumption,
-  },
+    assumption },
   contrapose! trace_0, clear trace_0,
   rw eq_J,
   rw trace_mod,
@@ -599,15 +609,15 @@ begin
   linarith [nat.prime.two_le pprime],
   rw zero_pow p_pos,
   suffices key :  ↑(fintype.card V) = (1 : zmod p), 
-  {rw key, change (1:zmod p) ≠ 0, sorry },
+  { rw key, simp },
   cases p_dvd_V_pred with k hk,
   
   lift k to ℕ, 
   { rw sub_eq_iff_eq_add at hk, norm_cast at hk, rw hk, simp },
   have p_pos' : (0 : ℤ) < p := by exact_mod_cast p_pos,
   apply nonneg_of_mul_nonneg_left _ p_pos',
-  rw [← hk, cardV], norm_cast,
-  sorry
+  rw [← hk, cardV, add_sub_cancel], norm_cast, 
+  simp
 end
 
 
