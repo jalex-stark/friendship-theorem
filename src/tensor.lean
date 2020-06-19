@@ -48,46 +48,25 @@ begin
 end 
 
 -- f : A ⊗[R] B ≃ₗ[R] C)
-example : matrix n n A ≃ₗ[R] A ⊗[R] matrix n n R :=
-begin
-  refine 
-  { to_fun := λ x, ∑ i j : n, (x i j) ⊗ₜ[R] (elem_matrix i j),
+example : matrix n n A →ₗ[R] A ⊗[R] matrix n n R :=
+{ to_fun := λ x, ∑ i j : n, (x i j) ⊗ₜ[R] (elem_matrix i j),
     map_add' := by { intros,
       rw ← sum_add_distrib,
       conv_rhs { congr, skip, funext, rw ← sum_add_distrib,}, 
       apply sum_congr, {refl}, intro i, norm_num,
       apply sum_congr, {refl}, intro j, norm_num,
       rw add_tmul },
-    map_smul' := by { 
-      -- rw smul_sum,
-      sorry
-    }, 
-    inv_fun := _, 
-    left_inv := _, 
-    right_inv := _ },
+    map_smul' := by { intros, simp_rw smul_sum, congr }}
+
+
+def matrix_lin_equiv : matrix n n A ≃ₗ[R] A ⊗[R] matrix n n R :=
+begin
+-- now prove it's invertible by showing it takes a basis to a basis
 end
 
 example : matrix n n A ≃ₐ[R] A ⊗[R] matrix n n R := 
 begin
-  symmetry, apply alg_equiv_of_linear_equiv_tensor_product,
-end
-
-example : matrix n n A →ₐ[R] A ⊗[R] matrix n n R :=
-begin
-  refine {to_fun := λ x, ∑ i j : n, (x i j) ⊗ₜ[R] (elem_matrix i j), 
-  map_one' := _, map_mul' := _, map_zero' := _, map_add' := _, commutes' := _},
-  { 
-    sorry },
-  { intros,
-    rw matrix.mul_eq_mul, unfold matrix.mul, unfold matrix.dot_product,
-    --rw finset.sum_tmul,
-   sorry },
-  { simp },
-  { intros,
-    rw ← sum_add_distrib,
-    conv_rhs { congr, skip, funext, rw ← sum_add_distrib,}, 
-    apply sum_congr, {refl}, intro i, norm_num,
-    apply sum_congr, {refl}, intro j, norm_num,
-    rw add_tmul}, 
-  sorry
+  symmetry, 
+  -- why doesn't this work?
+  have := alg_equiv_of_linear_equiv_tensor_product matrix_lin_equiv,
 end
