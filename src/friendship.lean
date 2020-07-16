@@ -56,11 +56,8 @@ def no_pol (G:fin_graph V) : Prop :=
 
 lemma exists_pol_of_not_no_pol {G:fin_graph V}:
   (¬ no_pol G) ↔ exists_politician G:=
-begin
-  unfold no_pol,
-  unfold exists_politician,
-  push_neg, refl,
-end
+by unfold no_pol exists_politician; finish
+
 
 def path_bigraph (G : fin_graph V) (A B:finset V) : bigraph V V:=
   bigraph.mk A B G.E

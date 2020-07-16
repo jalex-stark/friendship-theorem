@@ -4,15 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Aaron Anderson.
 -/
 
-import linear_algebra.basic
-import linear_algebra.matrix
-import linear_algebra.determinant
+import linear_algebra
+-- import linear_algebra.matrix
+-- import linear_algebra.determinant
 import data.polynomial
 import ring_theory.polynomial
 import data.equiv.basic
 import data.zmod.basic
-import cayley_hamilton
 import algebra.module
+import cayley_hamilton
+
 
 open polynomial
 
@@ -23,12 +24,10 @@ open_locale classical
 noncomputable theory
 
 variables {n : Type u} [fintype n] [inhabited n] [decidable_eq n] 
-variables {R : Type u} [integral_domain R] [nonzero R] --[decidable_eq R]
+variables {R : Type u} [integral_domain R] [nontrivial R] 
 
 def poly_of_perm (M : matrix n n R) (σ : equiv.perm n) : polynomial R :=
   (σ.sign) * finset.univ.prod (λ (i : n), (ite (σ i = i) X 0) - C (M (σ i) i))
-#check @nat_degree_mul_eq
-#check @degree_mul_le
 
 @[simp]
 lemma nat_degree_of_mat_val (M : matrix n n R) (i j:n) :
@@ -41,17 +40,14 @@ begin
 end
 
 
---variable [decidable_eq R]
-
 lemma gt_one_nonfixed_point_of_nonrefl {σ : equiv.perm n} (h : σ ≠ equiv.refl n) : 
 1 < (finset.filter (λ (x : n), ¬ σ x = x) finset.univ).card :=
 begin
   rw finset.one_lt_card_iff,
   contrapose! h,
-  ext, dsimp,
-  have := h (σ x) x, 
-  cases this, swap, cases this,
-  all_goals { revert this, simp }
+  ext, dsimp, 
+  by_cases hx : σ x = x, exact hx,
+  apply h; simpa,
 end
 
 lemma lt_card_sub_one_fixed_point_of_nonrefl {σ : equiv.perm n} (h : σ ≠ equiv.refl n) :
@@ -145,14 +141,14 @@ begin
   apply poly_of_perm_in_low_deg_submodule M σ hσ.left,
 end
 
-lemma finset.sum_erase {α : Type u} {β : Type u} {s : finset α} {a : α} {f : α → β} [add_comm_monoid β] [decidable_eq α] :
-a ∈ s → f a + (s.erase a).sum f = s.sum f :=
-begin
-  intro h,
-  symmetry,
-  conv_lhs {rw ← finset.insert_erase h},
-  apply finset.sum_insert (finset.not_mem_erase a s),
-end
+-- lemma finset.sum_erase {α : Type u} {β : Type u} {s : finset α} {a : α} {f : α → β} [add_comm_monoid β] [decidable_eq α] :
+-- a ∈ s → f a + (s.erase a).sum f = s.sum f :=
+-- begin
+--   intro h,
+--   symmetry,
+--   conv_lhs {rw ← finset.insert_erase h},
+--   apply finset.sum_insert (finset.not_mem_erase a s),
+-- end
 
 lemma char_poly_eq_poly_of_refl_plus_others (M: matrix n n R):
 char_poly M = (finset.univ.erase (equiv.refl n)).sum (poly_of_perm M)+poly_of_perm M (equiv.refl n):=
