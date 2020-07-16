@@ -1,8 +1,8 @@
 [package]
 name = "friendship-theorem"
 version = "0.1"
-lean_version = "leanprover-community/lean:3.16.2"
+lean_version = "leanprover-community/lean:3.17.1"
 path = "src"
 
 [dependencies]
-mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "cc16d35b642fc1bb838f6a2555b37a32a5465c32"}
+mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "33d45bf0afd8e036dccd60da55d46e12096b5ec2"}
