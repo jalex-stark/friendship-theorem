@@ -11,6 +11,7 @@ import data.zmod.basic
 import number_theory.quadratic_reciprocity
 import tactic.squeeze
 import data.polynomial
+import algebra.polynomial.big_operators
 
 noncomputable theory
 
@@ -25,6 +26,7 @@ variables {n : Type w} [fintype n] [decidable_eq n]
 variables {α : Type w} [decidable_eq α]
 
 open finset
+namespace polynomial
 open polynomial
 
 section fixed_points
@@ -119,7 +121,7 @@ lemma char_poly_monic_of_nontrivial [nontrivial R] (M : matrix n n R):
 begin
   by_cases fintype.card n = 0, rw [char_poly, det_of_dim_zero h], apply monic_one,
   have mon : (∏ (i : n), (X - C (M i i))).monic,
-  { apply monic_prod_monic univ (λ i : n, (X - C (M i i))), simp [monic_X_sub_C], },
+  { apply monic_prod_of_monic univ (λ i : n, (X - C (M i i))), simp [monic_X_sub_C], },
   rw ← sub_add_cancel (∏ (i : n), (X - C (M i i))) (char_poly M) at mon,
   rw monic at *, rw leading_coeff_add_of_degree_lt at mon, rw ← mon,
   rw degree_char_poly_eq_dim, rw ← neg_sub, rw degree_neg,
@@ -324,7 +326,7 @@ begin
     rw finset.prod_insert ha,
     rw finset.sum_insert ha,
     rw next_coeff_mul_monic (monic a (finset.mem_insert_self a s)), swap,
-    { apply monic_prod_monic, intros b bs,
+    { apply monic_prod_of_monic, intros b bs,
       apply monic, apply finset.mem_insert_of_mem bs },
     {
       refine congr rfl (hs _),
@@ -539,3 +541,4 @@ begin
 end
 
 end char_p
+end polynomial
