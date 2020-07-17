@@ -1,139 +1,111 @@
 import data.fintype.basic linear_algebra.matrix data.matrix.basic data.real.basic
-import sym_matrix findicator 
+import sym_matrix
 
 open_locale classical
+open finset matrix
 noncomputable theory
+
+lemma symm_iff {α : Type*} {r : α → α → Prop} (h : symmetric r) {a b : α} : r a b ↔ r b a :=
+by { split; apply h }
+
+variable {V : Type*}
 
 section graph
 
+variable (V)
 
-structure simple_graph (V: Type*) :=
-(E: V → V → Prop)
-(loopless: irreflexive E)
-(undirected: symmetric E)
+structure simple_graph :=
+(E : V → V → Prop)
+(loopless : irreflexive E)
+(undirected : symmetric E)
 
 
-class fin_graph (V: Type*) [fintype V] extends simple_graph V
+variables {V} (G : simple_graph V)
 
-def neighbors {V: Type*} [fintype V] (G: fin_graph V) (v: V):finset V:=
-begin
-  have E:= G.E,
-  have vset:=_inst_1.elems,
-  have nbrs:= {w ∈ vset | E v w},
-  exact nbrs,
-end
+@[simp] lemma simple_graph.irrefl {v : V} : ¬ G.E v v := G.loopless v
 
-@[simp] lemma neighbor_iff_adjacent  {V: Type*} [fintype V] (G: fin_graph V) (v w:V):
-  w ∈ neighbors G v ↔ G.E v w:=
-begin
-  unfold neighbors, 
-  simp only [finset.sep_def, finset.mem_filter],
-  split, { simp },
-  intro h, split, 
-  { apply finset.mem_univ },
-    exact h
-end
+@[simp] lemma foo_symmetry {v : V} : (λ w : V, G.E w v) = G.E v := by { ext, apply symm_iff G.undirected, }
 
-def degree {V: Type*} [fintype V] (G: fin_graph V) (v: V):=
-(neighbors G v).card
+variable [fintype V]
 
-def regular_graph {V:Type*} [fintype V] (G:fin_graph V) (d:ℕ ) :Prop:=
-  ∀ v:V, degree G v=d
+def neighbors (v : V) : finset V := univ.filter (G.E v)
+
+@[simp] lemma neighbor_iff_adjacent (v w : V) :
+ w ∈ neighbors G v ↔ G.E v w := by { unfold neighbors, simp }
+
+def degree (v : V) : ℕ := (neighbors G v).card
+
+def regular_graph (d : ℕ) : Prop :=
+ ∀ v : V, degree G v = d
 
 end graph
+
 section adjacency_matrix
 
-def adjacency_matrix {V:Type*} [fintype V] (G: fin_graph V): matrix V V ℤ :=
-  λ v w:V, (prop_to_nat(G.E v w):ℤ)
+variables {V} [fintype V] (R : Type*) [ring R] (G : simple_graph V) -- R can be a semiring if we generalize trace
 
-@[simp] lemma adjacency_matrix_el_idem {V:Type*} [fintype V] (G: fin_graph V) (i j: V):
-  (adjacency_matrix G i j)*(adjacency_matrix G i j)=adjacency_matrix G i j :=
+def adjacency_matrix : matrix V V R :=
+ λ v w : V, ite (G.E v w) 1 0
+
+variable {R}
+
+@[simp] lemma adjacency_matrix_el_idem (i j : V) :
+ (adjacency_matrix R G i j) * (adjacency_matrix R G i j) = adjacency_matrix R G i j :=
+by { unfold adjacency_matrix, by_cases G.E i j; simp [h], }
+
+theorem adjacency_matrix_sym :
+ sym_matrix (adjacency_matrix R G) :=
 begin
-  unfold adjacency_matrix,
-  norm_cast, simp,
+  unfold sym_matrix, ext,
+  unfold matrix.transpose, unfold adjacency_matrix,
+  rw symm_iff G.undirected,
 end
 
-theorem adjacency_matrix_symm {V:Type*} [fintype V] (G: fin_graph V):
-  sym_matrix (adjacency_matrix G):=
+@[simp]
+lemma adjacency_matrix_apply {v w : V} :
+  adjacency_matrix R G v w = ite (G.E v w) 1 0 := rfl
+
+@[simp]
+lemma adjacency_matrix_dot_product {v : V} {vec : V → R} :
+  dot_product (adjacency_matrix R G v) vec = (neighbors G v).sum vec :=
 begin
-  unfold sym_matrix,
-  ext,
-  unfold matrix.transpose,
-  have E:= G.E,
-  unfold adjacency_matrix, norm_cast,
-  refine congr _ _, refl,
-  refine propext _,
-  split; apply G.undirected,
+  unfold dot_product, unfold neighbors, simp [sum_filter],
 end
 
-lemma adjacency_matrix_row_ind {V:Type*} [fintype V] (G: fin_graph V): 
-  ∀ v:V, get_row (adjacency_matrix G) v = findicator (neighbors G v):=
+@[simp]
+lemma dot_product_adjacency_matrix {v : V} {vec : V → R} :
+  dot_product vec (adjacency_matrix R G v) = (neighbors G v).sum vec :=
 begin
-  intro v, ext, 
-  by_cases G.E v x,
-  {transitivity (1:ℤ),
-  { unfold get_row,
-  unfold adjacency_matrix, simp [h]},
-  symmetry,
-  rwa [ind_one_iff_mem, neighbor_iff_adjacent]},
-  
-  transitivity (0:ℤ),
-  { unfold get_row, unfold adjacency_matrix, simp [h] },
-  symmetry,
-  rwa [ind_zero_iff_not_mem, neighbor_iff_adjacent],
+  unfold dot_product, unfold neighbors, simp [sum_filter],
 end
 
-lemma adjacency_matrix_col_ind {V:Type*} [fintype V] (G: fin_graph V): 
-  ∀ v:V, get_col (adjacency_matrix G) v = findicator (neighbors G v):=
+@[simp]
+lemma adjacency_matrix_mul_apply {M : matrix V V R} {v w : V} : (adjacency_matrix R G * M) v w = (neighbors G v).sum M w :=
+by { rw [mul_eq_mul, mul_val', adjacency_matrix_dot_product G, sum_apply] }
+
+@[simp]
+lemma mul_adjacency_matrix_apply {M : matrix V V R} {v w : V} : (M * adjacency_matrix R G) v w = (neighbors G w).sum (M v) :=
+by { rw [mul_eq_mul, mul_val', ← dot_product_adjacency_matrix G], simp_rw sym_matrix_apply (adjacency_matrix_sym G) }
+
+variable (R)
+theorem adj_mat_traceless : matrix.trace V R R (adjacency_matrix R G) = 0 := by simp
+variable {R}
+
+theorem adj_mat_sq_apply_eq {i : V} :
+  ((adjacency_matrix R G) * (adjacency_matrix R G)) i i = degree G i :=
 begin
-  intro v,
-  rw ← sym_matrix_col_eq_row (adjacency_matrix G) (adjacency_matrix_symm G) v,
-  apply adjacency_matrix_row_ind,
+  unfold degree, simp only [filter_congr_decidable, adjacency_matrix_mul_apply, sum_boole, sum_apply, adjacency_matrix_apply],
+  refine congr rfl (congr rfl _), ext,
+  simp only [mem_filter, neighbor_iff_adjacent], rw symm_iff G.undirected, tauto,
 end
 
-@[simp] lemma adj_mat_diag_zero {V:Type*} [fintype V] {G: fin_graph V}{v:V}:
-  (adjacency_matrix G v v)=0:=
-begin
-  unfold adjacency_matrix, norm_cast,
-  apply false_to_nat,
-  apply simple_graph.loopless,
-end
+variable {G}
 
-theorem adj_mat_traceless {V:Type*} [fintype V] (G: fin_graph V) :
-  matrix.trace V ℤ ℤ (adjacency_matrix G: matrix V V ℤ) = 0 := by simp
-
-theorem deg_from_adj_mat_sq {V:Type*} [fintype V] (G: fin_graph V):
-  ∀ (i:V), ((adjacency_matrix G) * (adjacency_matrix G)) i i=degree G i:=
+lemma adj_mat_mul_vec_ones_apply_of_regular {d : ℕ} (reg : regular_graph G d) (i : V):
+  (adjacency_matrix R G).mul_vec (λ j : V, 1) i = d :=
 begin
-  intro i,
-  have M:=adjacency_matrix G,
-  change (adjacency_matrix G).mul (adjacency_matrix G) i i= degree G i,
-  rw mul_val_eq_dot_row_col (adjacency_matrix G) (adjacency_matrix G) i i,
-  rw adjacency_matrix_row_ind G i,
-  rw adjacency_matrix_col_ind G i,
-  rw dot_inds_eq_card_inter,
-  rw finset.inter_self,
-  refl,
-end
-
-lemma reg_adj_mat_mul_vec_ones_is_degs {V:Type*} [fintype V] (G: fin_graph V)(d: ℕ):
-  regular_graph G d → (adjacency_matrix G).mul_vec (λ i:V, 1)=(λ i:V,d):=
-begin
-  intro reg,
-  ext,
-  unfold matrix.mul_vec,
-  change matrix.dot_product (get_row (adjacency_matrix G) x) (λ (i : V), 1) = d,
-  rw adjacency_matrix_row_ind G x,
-  have hfind : (λ (i:V), (1 : ℤ)) = findicator finset.univ,
-  ext,
-  symmetry,
-  rw ind_one_iff_mem,
-  apply finset.mem_univ,
-  rw hfind,
-  rw dot_inds_eq_card_inter,
-  simp,
-  unfold regular_graph at reg,
-  apply reg x,
+  unfold matrix.mul_vec, rw adjacency_matrix_dot_product, simp only [mul_one, nsmul_eq_mul, sum_const],
+  rw ← reg i, refl,
 end
 
 end adjacency_matrix
