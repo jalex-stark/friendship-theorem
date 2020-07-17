@@ -3,23 +3,6 @@ import data.matrix.basic linear_algebra.matrix data.polynomial linear_algebra.de
 open_locale classical
 noncomputable theory
 
-section matrix_coe
-def matrix_compose {m n α β:Type*} [fintype m] [fintype n] (f:α → β) :
-  (matrix m n α)→(matrix m n β):=
-  λ (M: matrix m n α) (i:m) (j:n), f(M i j)
-
-def matrix_coe {m n α β:Type*} [fintype m] [fintype n] [has_coe α β] :
-  (matrix m n α)→(matrix m n β):=
-  λ (M: matrix m n α) (i:m) (j:n), (M i j:β)
-
-@[instance] def matrix.has_coe {m n α β:Type*} [fintype m][fintype n][has_coe α β]:
-  has_coe (matrix m n α) (matrix m n β):=⟨matrix_coe⟩
-
-@[simp] lemma matrix_coe_comm {m n α β:Type*} [fintype m][fintype n][has_coe α β] {M:matrix m n α} {i:m} {j:n}:
-  (M: matrix m n β) i j = (M i j:β):= rfl
-
-end matrix_coe
-
 def sym_matrix {m α : Type*} [fintype m] (M: matrix m m α) : Prop :=
   M = M.transpose
 
