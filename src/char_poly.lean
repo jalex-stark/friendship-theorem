@@ -13,6 +13,7 @@ import tactic.squeeze
 import data.polynomial
 import algebra.polynomial.basic
 import algebra.polynomial.big_operators
+import field_theory.separable
 
 noncomputable theory
 
@@ -226,12 +227,12 @@ begin
   rw ← pow_add, refine congr rfl _, symmetry, apply nat.succ_pred_eq_of_pos posp,
 end
 
-lemma poly_pow_p_char_p (f : polynomial (zmod p)) :
-f ^ p = f.comp (X ^ p) :=
+lemma zmod.expand_p (f : polynomial (zmod p)) :
+expand (zmod p) p f = f ^ p :=
 begin
-  apply f.induction_on', intros, rw add_pow_char, rw [a, a_1], simp, assumption,
-  intros, repeat {rw single_eq_C_mul_X}, rw mul_comp, rw mul_pow,  simp [pow_comp],
-  repeat {rw ← pow_mul}, rw mul_comm p n, rw ← C.map_pow, rw frobenius_fixed p a,
+  apply f.induction_on', intros a b ha hb, rw add_pow_char, simp [ha, hb], assumption,
+  intros n a, rw polynomial.expand_monomial, repeat {rw single_eq_C_mul_X},
+  rw [mul_pow, ← C.map_pow, frobenius_fixed p a], ring_exp,
 end
 
 variables {S : Type u} [ring S] [algebra R S]
@@ -265,7 +266,8 @@ begin
   swap, { congr, rw empty_matrix_eq_zero hn M, apply empty_matrix_eq_zero hn },
 
   apply frobenius_inj (polynomial (zmod p)) p, repeat {rw frobenius_def},
-  rw poly_pow_p_char_p p,-- (char_poly (M ^ p)),
+  rw ← zmod.expand_p,
+  unfold char_poly,
     sorry,
   -- unfold char_poly, unfold char_matrix, rw ← det_pow,
   -- repeat {rw sub_eq_add_neg},
