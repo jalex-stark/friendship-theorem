@@ -11,6 +11,7 @@ import data.zmod.basic
 import number_theory.quadratic_reciprocity
 import tactic.squeeze
 import data.polynomial
+import algebra.polynomial.basic
 import algebra.polynomial.big_operators
 
 noncomputable theory
@@ -156,6 +157,7 @@ end
 lemma matrix.scalar.commute (r : R) (M : matrix n n R) : commute (scalar n r) M :=
 by { unfold commute, unfold semiconj_by, simp }
 
+-- I feel like this should use polynomial.alg_hom_eval₂_algebra_map
 lemma eval_mat_poly_equiv (M : matrix n n (polynomial R)) (r : R) (i j : n) :
   polynomial.eval r (M i j) = polynomial.eval ((scalar n) r) (mat_poly_equiv M) i j :=
 begin
