@@ -18,14 +18,14 @@ import field_theory.separable
 noncomputable theory
 
 
-universes u v w
+universes u_1 u_2 u_3 u_4
 
 open polynomial matrix
 open_locale big_operators
 
-variables {R : Type u} [comm_ring R]
-variables {n : Type w} [fintype n] [decidable_eq n]
-variables {α : Type w} [decidable_eq α]
+variables {R : Type u_1} [comm_ring R]
+variables {n : Type u_2} [fintype n] [decidable_eq n]
+variables {α : Type u_2} [decidable_eq α]
 
 open finset
 open polynomial
@@ -148,11 +148,14 @@ begin
   rw [← fintype.card, fintype.card_pos_iff], apply_instance,
 end
 
-lemma hom_det {S : Type*} [comm_ring S] {M : matrix n n R} {f : R →+* S} :
-  f M.det = matrix.det (λ i j : n, f (M i j)) :=
-begin
-  unfold matrix.det, simp [f.map_sum, f.map_prod],
-end
+lemma ring_hom_det {S : Type u_1} [comm_ring S] {M : matrix n n R} {f : R →+* S} :
+  f M.det = matrix.det (f.map_matrix M) :=
+by { unfold matrix.det, simp [f.map_sum, f.map_prod] }
+
+lemma alg_hom_det {S : Type u_1} [comm_ring S] [algebra R S] {T : Type u_1} [comm_ring T] [algebra R T] 
+  {M : matrix n n S} {f : S →ₐ[R] T} :
+  f M.det = matrix.det ((f : S →+* T).map_matrix M) :=
+by { rw [← alg_hom.coe_to_ring_hom, ring_hom_det], }
 
 lemma matrix.scalar.commute (r : R) (M : matrix n n R) : commute (scalar n r) M :=
 by { unfold commute, unfold semiconj_by, simp }
@@ -177,8 +180,8 @@ end
 lemma eval_det (M : matrix n n (polynomial R)) (r : R) :
   polynomial.eval r M.det = (polynomial.eval (matrix.scalar n r) (mat_poly_equiv M)).det :=
 begin
-  rw [polynomial.eval, ← coe_eval₂_ring_hom, hom_det], refine congr rfl _,
-  rw [coe_eval₂_ring_hom, ← polynomial.eval],
+  rw [polynomial.eval, ← coe_eval₂_ring_hom, ring_hom_det], refine congr rfl _,
+  rw [ring_hom.map_matrix_apply, coe_eval₂_ring_hom, ← polynomial.eval],
   ext, apply eval_mat_poly_equiv,
 end
 
@@ -213,9 +216,9 @@ begin
 end
 
 
-lemma comp_det (p : polynomial R) (M : matrix n n (polynomial R)) :
-  (M.det).comp p = matrix.det (λ i j : n, (M i j).comp p) :=
-by { unfold comp, rw ← coe_eval₂_ring_hom, rw hom_det }
+--lemma comp_det (p : polynomial R) (M : matrix n n (polynomial R)) :
+--  (M.det).comp p = matrix.det (λ i j : n, (M i j).comp p) :=
+--by { unfold comp, rw ← coe_eval₂_ring_hom, rw ring_hom_det }
 
 variables (p : ℕ) [fact p.prime]
 
@@ -235,25 +238,20 @@ begin
   rw [mul_pow, ← C.map_pow, frobenius_fixed p a], ring_exp,
 end
 
-variables {S : Type u} [ring S] [algebra R S]
-
-def mat_C : (matrix n n R) →+* (matrix n n (polynomial R)) :=
-  mat_poly_equiv.symm.to_ring_equiv.to_ring_hom.comp C
-
-@[simp]
-lemma mat_C_apply (M : matrix n n R) (i j : n):
-  (mat_C M) i j = C (M i j) :=
-begin
-  unfold mat_C,
-  transitivity mat_poly_equiv.symm (C M) i j, simp, refl,
-  ext, by_cases n_1 = 0; simp [h, coeff_C],
-end
 
 @[simp]
 lemma empty_matrix_eq_zero {R : Type*} [ring R] (hn : ¬ nonempty n) (M : matrix n n R) :
 M = 0 :=
 begin
   ext, contrapose! hn, use i,
+end
+
+theorem sub_pow_char_of_commute (R : Type u_1) [ring R] {p : ℕ} [fact p.prime]
+  [char_p R p] (x y : R) (h : commute x y):
+(x - y)^p = x^p - y^p :=
+begin
+  rw [eq_sub_iff_add_eq, ← add_pow_char_of_commute], simp,
+  unfold commute, unfold semiconj_by, rw [sub_mul, mul_sub, h.eq],
 end
 
 
@@ -267,23 +265,11 @@ begin
 
   apply frobenius_inj (polynomial (zmod p)) p, repeat {rw frobenius_def},
   rw ← zmod.expand_p,
-  unfold char_poly,
-    sorry,
-  -- unfold char_poly, unfold char_matrix, rw ← det_pow,
-  -- repeat {rw sub_eq_add_neg},
-  -- rw add_pow_char_of_commute (matrix n n (polynomial (zmod p))), swap, apply matrix.scalar.commute,
-  -- swap, apply_instance,
-  -- swap, exact matrix.char_p p,
-  -- rw ← (scalar n).map_pow, rw comp_det,
-  -- rw neg_pow, rw neg_one_pow_eq_pow_mod_two, rw hp,
-  -- simp only [neg_val, neg_mul, matrix.one_mul, pow_one, neg_inj, mul_eq_mul],
-  -- refine congr rfl _, ext, refine congr (congr rfl _) rfl,
-  -- simp only [add_comp, neg_val, X_comp, coeff_add, mul_comp, add_val],
-  -- refine congr (congr rfl _) _,
-  -- { by_cases i = j; simp [h], },
-  -- rw ← ring_hom.map_neg, rw C_comp, rw ring_hom.map_neg,
-  -- simp_rw ← mat_C_apply,
-  -- rw ring_hom.map_pow,
+  unfold char_poly, rw alg_hom_det, rw ← det_pow, refine congr rfl _,
+  unfold char_matrix,
+  transitivity ((scalar n) X - C.map_matrix M) ^ p, swap, sorry,
+  rw sub_pow_char_of_commute, swap, apply matrix.scalar.commute, rw ← C.map_matrix.map_pow, rw ← (scalar n).map_pow,
+  ext, refine congr (congr rfl _) rfl, by_cases i = j; simp [h], sorry, sorry,
 end
 
 end char_p
