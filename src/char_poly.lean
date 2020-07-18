@@ -269,7 +269,11 @@ begin
   unfold char_matrix,
   transitivity ((scalar n) X - C.map_matrix M) ^ p, swap, sorry,
   rw sub_pow_char_of_commute, swap, apply matrix.scalar.commute, rw ← C.map_matrix.map_pow, rw ← (scalar n).map_pow,
-  ext, refine congr (congr rfl _) rfl, by_cases i = j; simp [h], sorry, sorry,
+  ext, refine congr (congr rfl _) rfl, by_cases i = j; simp [h], sorry, 
+  {
+    refine congr rfl _, refine congr (congr _ rfl) rfl,
+    refine congr (congr _ rfl) rfl, sorry,
+  }
 end
 
 end char_p
