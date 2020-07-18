@@ -37,8 +37,8 @@ lemma gt_one_nonfixed_point_of_nonrefl {σ : equiv.perm n} (h : σ ≠ equiv.ref
 begin
   rw one_lt_card_iff,
   contrapose! h, ext, dsimp,
-  have := h (σ x) x,
-  squeeze_simp at this; tauto,
+  have := h (σ x) x, simp only [true_and, mem_filter, equiv.apply_eq_iff_eq, mem_univ, ne.def] at this,
+  tauto,
 end
 
 lemma lt_card_sub_one_fixed_point_of_nonrefl {σ : equiv.perm n} (h : σ ≠ equiv.refl n) :
